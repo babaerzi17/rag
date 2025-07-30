@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录页面测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .test-info {
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px;
+        }
+        .checklist {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .checklist h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .checklist ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .checklist li::before {
+            content: "☐ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>登录页面测试页面</h2>
+        <p>点击下面的链接访问登录页面，检查用户名和密码字段是否正确显示。</p>
+        <a href="http://localhost:3000" class="link" target="_blank">打开登录页面</a>
+    </div>
+
+    <div class="checklist">
+        <h3>检查清单：</h3>
+        <ul>
+            <li>登录页面是否正确加载</li>
+            <li>用户名输入框是否可见且功能正常</li>
+            <li>密码输入框是否可见且功能正常</li>
+            <li>记住我选项是否正确显示</li>
+            <li>忘记密码链接是否正确显示</li>
+            <li>登录按钮是否可见且可点击</li>
+            <li>演示账户卡片是否正确显示</li>
+            <li>整体布局是否美观</li>
+        </ul>
+    </div>
+
+    <script>
+        // 简单的测试检查
+        console.log('登录页面测试页面已加载');
+        console.log('请在浏览器中访问 http://localhost:3000 检查登录页面');
+    </script>
+</body>
+</html>

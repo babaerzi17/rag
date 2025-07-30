@@ -1,0 +1,9 @@
+/* 全局表格字体大小调整 */
+.el-table {
+  font-size: 12px;
+}
+
+.el-table th.el-table__cell,
+.el-table td.el-table__cell {
+  font-size: 12px;
+} 

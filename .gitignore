@@ -1,0 +1,22 @@
+# 忽略所有 .log 文件
+*.log
+.idea/
+.svn
+/backend/.venv/
+/backend/node_modules/
+
+# 忽略 node_modules 目录
+node_modules/
+
+# 忽略 IDE 配置文件（如 VS Code）
+.vscode/
+frontend/dist
+
+# 忽略 Python 缓存文件
+__pycache__/
+*.py[cod]
+attachments
+# 忽略系统文件（如 Windows 的 Thumbs.db）
+Thumbs.db
+.DS_Store  # macOS 的临时文件
+
