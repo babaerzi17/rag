@@ -17,17 +17,17 @@ try:
     from ..models.knowledge import KnowledgeBase, Document, DocumentChunk, KnowledgeBaseStatus, DocumentStatus
     from ..models.user import User
     from ..auth.security import get_current_user
-    from ..schemas import knowledge as schemas
+    from ..schemas.knowledge import *  # Import knowledge schemas directly
     from ..services.knowledge_service import KnowledgeService
     from ..services.document_service import DocumentService
     from ..logger import get_logger
 except ImportError:
-    # 尝试绝对导入
+    # Try absolute imports
     from backend.database import get_db
     from backend.models.knowledge import KnowledgeBase, Document, DocumentChunk, KnowledgeBaseStatus, DocumentStatus
     from backend.models.user import User
     from backend.auth.security import get_current_user
-    from backend.schemas import knowledge as schemas
+    from backend.schemas.knowledge import *  # Import knowledge schemas directly
     from backend.services.knowledge_service import KnowledgeService
     from backend.services.document_service import DocumentService
     from backend.logger import get_logger
@@ -43,7 +43,7 @@ def get_knowledge_service_dep(db: Session = Depends(get_db)) -> KnowledgeService
 def get_document_service_dep(db: Session = Depends(get_db)) -> DocumentService:
     return DocumentService(db)
 
-@router.get("/", response_model=List[schemas.KnowledgeBaseResponse])
+@router.get("/", response_model=List[KnowledgeBaseResponse])
 async def get_knowledge_bases(
     skip: int = 0,
     limit: int = 100,
@@ -62,9 +62,9 @@ async def get_knowledge_bases(
     logger.info(f"获取知识库列表: user_id={current_user.id}, skip={skip}, limit={limit}, search={search}")
     return knowledge_service.get_all(current_user.id, skip, limit)
 
-@router.post("/", response_model=schemas.KnowledgeBaseResponse)
+@router.post("/", response_model=KnowledgeBaseResponse)
 async def create_knowledge_base(
-    knowledge_base: schemas.KnowledgeBaseCreate,
+    knowledge_base: KnowledgeBaseCreate,
     knowledge_service: KnowledgeService = Depends(get_knowledge_service_dep),
     current_user: User = Depends(get_current_user)
 ):
@@ -72,7 +72,7 @@ async def create_knowledge_base(
     logger.info(f"创建知识库: user_id={current_user.id}, data={knowledge_base}")
     return knowledge_service.create(current_user.id, knowledge_base.dict())
 
-@router.get("/{kb_id}", response_model=schemas.KnowledgeBaseResponse)
+@router.get("/{kb_id}", response_model=KnowledgeBaseResponse)
 async def get_knowledge_base(
     kb_id: int,
     knowledge_service: KnowledgeService = Depends(get_knowledge_service_dep),
@@ -86,10 +86,10 @@ async def get_knowledge_base(
         raise HTTPException(status_code=404, detail="知识库不存在")
     return kb
 
-@router.put("/{kb_id}", response_model=schemas.KnowledgeBaseResponse)
+@router.put("/{kb_id}", response_model=KnowledgeBaseResponse)
 async def update_knowledge_base(
     kb_id: int,
-    knowledge_base: schemas.KnowledgeBaseUpdate,
+    knowledge_base: KnowledgeBaseUpdate,
     knowledge_service: KnowledgeService = Depends(get_knowledge_service_dep),
     current_user: User = Depends(get_current_user)
 ):
@@ -115,7 +115,7 @@ async def delete_knowledge_base(
         raise HTTPException(status_code=404, detail="知识库不存在")
     return {"message": "知识库删除成功"}
 
-@router.post("/{kb_id}/documents", response_model=schemas.DocumentResponse)
+@router.post("/{kb_id}/documents", response_model=DocumentResponse)
 async def upload_document(
     kb_id: int,
     file: UploadFile = File(...),
@@ -173,7 +173,7 @@ async def upload_document(
     
     return doc
 
-@router.get("/{kb_id}/documents", response_model=List[schemas.DocumentResponse])
+@router.get("/{kb_id}/documents", response_model=List[DocumentResponse])
 async def get_documents(
     kb_id: int,
     skip: int = 0,
