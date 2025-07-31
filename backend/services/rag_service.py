@@ -1,5 +1,5 @@
 """
-RAG服务，负责文档处理、分块、向量化和检索
+RAG Service, responsible for document processing, chunking, vectorization, and retrieval
 """
 
 import os
@@ -20,50 +20,50 @@ except ImportError:
 
 class RAGService:
     """
-    RAG服务类，负责文档处理、分块、向量化和检索
+    RAG Service class, responsible for document processing, chunking, vectorization, and retrieval
     """
     
     def __init__(self):
-        """初始化RAG服务"""
+        """Initialize RAG Service"""
         self.logger = get_logger(__name__)
-        self.logger.info("初始化RAG服务")
+        self.logger.info("Initializing RAG Service")
     
     def process_document(self, file_path: str, doc_id: int, kb_id: int) -> List[Dict[str, Any]]:
         """
-        处理文档：提取文本、分块、向量化
+        Process document: extract text, chunk, vectorize
         
         Args:
-            file_path: 文档路径
-            doc_id: 文档ID
-            kb_id: 知识库ID
+            file_path: Document path
+            doc_id: Document ID
+            kb_id: Knowledge base ID
             
         Returns:
-            块信息列表，每个块包含内容、索引、向量ID和元数据
+            List of chunk information, each chunk contains content, index, vector ID and metadata
         """
-        self.logger.info(f"处理文档: doc_id={doc_id}, kb_id={kb_id}, path={file_path}")
+        self.logger.info(f"Processing document: doc_id={doc_id}, kb_id={kb_id}, path={file_path}")
         
-        # 检查文件是否存在
+        # Check if file exists
         if not os.path.exists(file_path):
-            self.logger.error(f"文件不存在: {file_path}")
+            self.logger.error(f"File does not exist: {file_path}")
             return []
         
-        # 获取文件类型
+        # Get file type
         file_ext = os.path.splitext(file_path)[1].lower()
         
-        # 简单示例：读取文本文件并按行分块
-        # 在实际应用中，应该根据文件类型使用不同的处理方法
+        # Simple example: read text file and chunk by lines
+        # In a real application, different processing methods should be used based on file type
         try:
             chunks = []
             if file_ext in ['.txt', '.md']:
-                # 文本文件按行分块
+                # Text files chunked by lines
                 with open(file_path, 'r', encoding='utf-8') as f:
                     lines = f.readlines()
                     
-                chunk_size = 5  # 每5行一个块
+                chunk_size = 5  # 5 lines per chunk
                 for i in range(0, len(lines), chunk_size):
                     chunk_text = ''.join(lines[i:i+chunk_size]).strip()
                     if chunk_text:
-                        # 生成唯一的向量ID
+                        # Generate unique vector ID
                         embedding_id = str(uuid.uuid4())
                         chunks.append({
                             "content": chunk_text,
@@ -77,8 +77,8 @@ class RAGService:
                             }
                         })
             else:
-                # 其他文件类型：添加一个占位块
-                self.logger.warning(f"不支持的文件类型处理: {file_ext}，添加占位块")
+                # Other file types: add a placeholder chunk
+                self.logger.warning(f"Unsupported file type: {file_ext}, adding placeholder chunk")
                 chunks.append({
                     "content": f"File type {file_ext} content placeholder",
                     "chunk_index": 0,
@@ -90,50 +90,50 @@ class RAGService:
                     }
                 })
                 
-            self.logger.info(f"文档处理完成: doc_id={doc_id}, chunks={len(chunks)}")
+            self.logger.info(f"Document processing completed: doc_id={doc_id}, chunks={len(chunks)}")
             return chunks
             
         except Exception as e:
-            self.logger.error(f"处理文档时出错: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing document: {str(e)}", exc_info=True)
             return []
     
     def delete_document_chunks(self, doc_id: int) -> bool:
         """
-        删除文档的所有块
+        Delete all chunks of a document
         
         Args:
-            doc_id: 文档ID
+            doc_id: Document ID
             
         Returns:
-            是否成功删除
+            Whether deletion was successful
         """
-        self.logger.info(f"删除文档块: doc_id={doc_id}")
+        self.logger.info(f"Deleting document chunks: doc_id={doc_id}")
         
-        # 模拟删除向量数据库中的记录
-        # 实际应用中应该调用向量数据库API
-        self.logger.info(f"已从向量数据库中删除文档块: doc_id={doc_id}")
+        # Simulate deleting records from vector database
+        # In a real application, this should call the vector database API
+        self.logger.info(f"Document chunks deleted from vector database: doc_id={doc_id}")
         
         return True
     
     def search(self, kb_id: int, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         """
-        在知识库中搜索与查询相关的内容
+        Search for content related to the query in the knowledge base
         
         Args:
-            kb_id: 知识库ID
-            query: 查询文本
-            limit: 返回结果数量上限
+            kb_id: Knowledge base ID
+            query: Query text
+            limit: Maximum number of results to return
             
         Returns:
-            相关内容列表
+            List of related content
         """
-        self.logger.info(f"知识库搜索: kb_id={kb_id}, query={query}")
+        self.logger.info(f"Knowledge base search: kb_id={kb_id}, query={query}")
         
-        # 模拟向量搜索
-        # 实际应用中应该调用向量数据库API
+        # Simulate vector search
+        # In a real application, this should call the vector database API
         
         return [{
-            "content": f"示例搜索结果 {i} (查询: {query})",
+            "content": f"Example search result {i} (query: {query})",
             "score": 1.0 - i * 0.1,
             "metadata": {
                 "doc_id": i + 1000,
@@ -143,15 +143,15 @@ class RAGService:
     
     def get_collection_stats(self) -> Dict[str, Any]:
         """
-        获取向量数据库统计信息
+        Get vector database statistics
         
         Returns:
-            统计信息
+            Statistics information
         """
-        self.logger.info("获取向量数据库统计信息")
+        self.logger.info("Getting vector database statistics")
         
-        # 模拟返回统计信息
-        # 实际应用中应该调用向量数据库API
+        # Simulate returning statistics
+        # In a real application, this should call the vector database API
         return {
             "vector_count": 0,
             "dimension": 1536,

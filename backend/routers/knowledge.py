@@ -6,7 +6,7 @@ import shutil
 import sys
 from datetime import datetime
 
-# 确保导入路径正确
+# Ensure import paths are correct
 current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.dirname(current_dir)
 if backend_dir not in sys.path:
@@ -150,7 +150,7 @@ async def upload_document(
                 content=chunk_info["content"],
                 chunk_index=chunk_info["chunk_index"],
                 embedding_id=chunk_info["embedding_id"],
-                metadata=chunk_info["metadata"]
+                chunk_metadata=chunk_info["metadata"]
             )
             db.add(chunk)
         

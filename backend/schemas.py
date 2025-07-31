@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional, Generic, TypeVar
+from .schemas.knowledge import *  # Import all knowledge schemas
 
 T = TypeVar('T')
 

@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self, default_provider: str = "deepseek"):
-        """初始化LLM服务"""
+        """Initialize LLM service"""
         self.default_provider = default_provider
         self.clients = {}
         self._init_clients()
     
     def _init_clients(self):
-        """初始化各种LLM客户端"""
-        # DeepSeek客户端
+        """Initialize various LLM clients"""
+        # DeepSeek client
         deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
         if deepseek_api_key:
             self.clients["deepseek"] = AsyncOpenAI(
@@ -25,7 +25,7 @@ class LLMService:
                 base_url="https://api.deepseek.com/v1"
             )
         
-        # OpenAI客户端
+        # OpenAI client
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if openai_api_key:
             self.clients["openai"] = AsyncOpenAI(
@@ -33,7 +33,7 @@ class LLMService:
                 base_url="https://api.openai.com/v1"
             )
         
-        # 自定义客户端（支持其他OpenAI兼容的API）
+        # Custom client (supports other OpenAI compatible APIs)
         custom_base_url = os.getenv("CUSTOM_LLM_BASE_URL")
         custom_api_key = os.getenv("CUSTOM_LLM_API_KEY")
         if custom_base_url and custom_api_key:
@@ -51,7 +51,7 @@ class LLMService:
         max_tokens: int = 1000,
         stream: bool = False
     ) -> Dict[str, Any]:
-        """聊天完成接口"""
+        """Chat completion interface"""
         provider = provider or self.default_provider
         client = self.clients.get(provider)
         
@@ -240,7 +240,7 @@ class RAGChatService:
         context_parts = []
         for i, result in enumerate(search_results, 1):
             content = result["content"]
-            metadata = result["metadata"]
+            doc_metadata = result["metadata"]  # This field name remains "metadata" in search results
             score = result["similarity_score"]
             
             context_parts.append(
@@ -277,12 +277,12 @@ class RAGChatService:
         """格式化参考来源"""
         sources = []
         for result in search_results:
-            metadata = result["metadata"]
+            doc_metadata = result["metadata"]  # This field name remains "metadata" in search results
             sources.append({
                 "id": result["id"],
-                "title": metadata.get("file_path", "未知文档"),
+                "title": doc_metadata.get("file_path", "未知文档"),
                 "content": result["content"][:200] + "..." if len(result["content"]) > 200 else result["content"],
                 "similarity_score": result["similarity_score"],
-                "metadata": metadata
+                "metadata": doc_metadata
             })
         return sources
