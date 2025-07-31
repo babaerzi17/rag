@@ -1,7 +1,7 @@
-"""from sqlalchemy import create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from .models.base import Base  # 假设有base.py
+from models.base import Base  # Assuming there is base.py
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./rag.db"
 
@@ -14,10 +14,5 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-""" 
+# Re-export get_db from config.database to maintain compatibility
+from config.database import get_db 
