@@ -7,10 +7,13 @@
           v-model="searchQuery"
           placeholder="搜索知识库名称"
           :prefix-icon="Search"
-          @input="handleSearch"
+          @keyup.enter="handleSearch"
           clearable
           style="width: 300px"
         />
+        <el-button :icon="Search" @click="handleSearch" size="small" style="margin-left: 10px">
+          搜索
+        </el-button>
       </div>
       <div class="actions">
         <el-button type="primary" :icon="Plus" @click="showCreateDialog" size="small">
@@ -258,7 +261,7 @@ const pagination = reactive({
 const kbForm = reactive({
   name: '',
   description: '',
-  type: '技术文档',
+  type: '技术',
   status: 'active',
   color: '#1976D2',
   isPublic: false
@@ -291,7 +294,7 @@ const duplicateRules: FormRules = {
 }
 
 // 类型选项
-const typeOptions = ['技术文档', '产品手册', '培训资料', '法律文件', '其他']
+const typeOptions = ['技术', '产品', '培训', '法律', '其他']
 
 // 颜色选项
 const colorOptions = [
@@ -312,9 +315,32 @@ const fetchKnowledgeBases = async () => {
       pageSize: pagination.pageSize,
       search: searchQuery.value
     })
-    knowledgeBaseList.value = response.items
-    pagination.total = response.total
+    
+    // 后端返回的是直接数组，不是分页对象
+    const dataArray = Array.isArray(response) ? response : response.items || []
+    
+    // 为每个知识库添加缺失字段
+    knowledgeBaseList.value = dataArray.map(kb => ({
+      ...kb,
+      owner: {
+        id: kb.created_by?.toString() || '1',
+        name: '管理员',
+        avatar: ''
+      },
+      stats: {
+        documentCount: 0 // 临时值
+      },
+      // 确保字段名一致
+      updatedAt: kb.updated_at,
+      createdAt: kb.created_at,
+      isPublic: kb.is_public
+    }))
+    
+    pagination.total = dataArray.length // 暂时用数组长度
+    console.log('KnowledgeManagement - Fetched data:', dataArray)
+    console.log('KnowledgeManagement - Processed list:', knowledgeBaseList.value)
   } catch (error: any) {
+    console.error('KnowledgeManagement - Fetch error:', error)
     ElMessage.error('获取知识库列表失败：' + (error.message || '未知错误'))
   } finally {
     loading.value = false
@@ -357,10 +383,10 @@ const showEditDialog = (kb: KnowledgeBase) => {
   
   // 填充表单数据
   kbForm.name = kb.name
-  kbForm.description = kb.description
-  kbForm.type = kb.type
+  kbForm.description = kb.description || ''
+  kbForm.type = kb.type || '技术'
   kbForm.status = kb.status
-  kbForm.color = kb.color
+  kbForm.color = kb.color || '#1976D2'
   kbForm.isPublic = kb.isPublic
   
   dialogVisible.value = true
@@ -369,7 +395,7 @@ const showEditDialog = (kb: KnowledgeBase) => {
 const resetForm = () => {
   kbForm.name = ''
   kbForm.description = ''
-  kbForm.type = '技术文档'
+  kbForm.type = '技术'
   kbForm.status = 'active'
   kbForm.color = '#1976D2'
   kbForm.isPublic = false
@@ -403,7 +429,7 @@ const submitForm = async () => {
         color: kbForm.color,
         isPublic: kbForm.isPublic
       }
-      await knowledgeApi.updateKnowledgeBase(currentKB.value.id, kbData)
+      await knowledgeApi.updateKnowledgeBase(currentKB.value.id.toString(), kbData)
       ElMessage.success('知识库更新成功')
     }
     
@@ -429,7 +455,7 @@ const confirmDelete = (kb: KnowledgeBase) => {
   ).then(async () => {
     try {
       submitting.value = true
-      await knowledgeApi.deleteKnowledgeBase(kb.id)
+      await knowledgeApi.deleteKnowledgeBase(kb.id.toString())
       ElMessage.success('知识库删除成功')
       fetchKnowledgeBases()
     } catch (error: any) {
@@ -455,7 +481,7 @@ const submitDuplicate = async () => {
     await duplicateFormRef.value.validate()
     submitting.value = true
     
-    await knowledgeApi.duplicateKnowledgeBase(currentKB.value.id, duplicateForm.name)
+    await knowledgeApi.duplicateKnowledgeBase(currentKB.value.id.toString(), duplicateForm.name)
     ElMessage.success('知识库复制成功')
     duplicateDialogVisible.value = false
     fetchKnowledgeBases()

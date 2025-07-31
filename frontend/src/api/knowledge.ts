@@ -1,25 +1,29 @@
-import { api } from './index'
+import apiClient from './index'
 import type { PaginatedResponse } from '@/types'
 
 // 知识库相关接口类型
 export interface KnowledgeBase {
-  id: string
+  id: number // 后端返回数字类型
   name: string
   description: string
-  type: string
+  type?: string // 标记为可选
   status: 'active' | 'inactive' | 'maintenance'
-  color: string
-  isPublic: boolean
-  settings: KnowledgeBaseSettings
-  stats: KnowledgeBaseStats
-  owner: {
+  color?: string // 标记为可选
+  is_public: boolean // 匹配后端字段名 is_public
+  embedding_model?: string // 添加后端返回的字段
+  vector_store?: string // 添加后端返回的字段
+  kb_metadata?: Record<string, any> // 修改为kb_metadata以匹配后端
+  created_by?: number // 添加后端返回的字段
+  created_at: string // 匹配后端字段名
+  updated_at: string // 匹配后端字段名
+  tags?: string[]
+  
+  // 前端需要但后端不返回的字段 - 在组件中处理
+  owner?: {
     id: string
-    name: string
+    name?: string
     avatar?: string
   }
-  createdAt: string
-  updatedAt: string
-  tags?: string[]
 }
 
 export interface KnowledgeBaseSettings {
@@ -80,8 +84,10 @@ export interface KnowledgeBaseSearchParams {
 // 知识库API服务
 export const knowledgeApi = {
   // 获取知识库列表
-  async getKnowledgeBases(params?: KnowledgeBaseSearchParams): Promise<PaginatedResponse<KnowledgeBase>> {
-    return api.paginate('/knowledge-bases', params)
+  async getKnowledgeBases(params?: KnowledgeBaseSearchParams): Promise<KnowledgeBase[]> {
+    // 后端直接返回数组，不是包装的ApiResponse格式
+    const response = await apiClient.get<KnowledgeBase[]>('/knowledge-bases/', { params })
+    return response.data
   },
 
   // 获取知识库详情
