@@ -4,12 +4,12 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 Jinja2==3.1.2
 
-# 数据库 & ORM
+# Database & ORM
 SQLAlchemy==2.0.23
 psycopg2-binary==2.9.9 # For PostgreSQL
 alembic==1.12.1
 
-# 认证 & 安全
+# Authentication & Security
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 
@@ -28,7 +28,7 @@ unstructured==0.11.2
 # For markdown support in unstructured
 markdown-it-py[linkify,plugins]==3.0.0
 
-# 其他
+# Others
 requests==2.31.0
 tqdm==4.66.1
 numpy==1.26.2
