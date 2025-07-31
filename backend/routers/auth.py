@@ -22,12 +22,12 @@ try:
     from ..common.crud import authenticate_user # Import authenticate_user
 except ImportError:
     # Try using absolute imports
-    from backend.config.database import get_db
-    from backend.schemas import Token, User
-    from backend.auth.security import (create_access_token, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, 
-                                    get_current_user, REMEMBER_ME_TOKEN_EXPIRE_DAYS)
-    from backend.models.user import User as DBUser
-    from backend.common.crud import authenticate_user # Import authenticate_user
+    from config.database import get_db
+    from schemas import Token, User
+    from auth.security import (create_access_token, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, 
+                                get_current_user, REMEMBER_ME_TOKEN_EXPIRE_DAYS)
+    from models.user import User as DBUser
+    from common.crud import authenticate_user # Import authenticate_user
 
 import logging
 from datetime import timedelta

@@ -5,7 +5,7 @@ from datetime import datetime
 # ChatSession schemas
 class ChatSessionBase(BaseModel):
     title: Optional[str] = None
-    kb_id: Optional[int] = None
+    knowledge_base_id: Optional[int] = None  # Changed from kb_id
     model_config: Optional[Dict[str, Any]] = None
 
 class ChatSessionCreate(ChatSessionBase):
@@ -13,7 +13,7 @@ class ChatSessionCreate(ChatSessionBase):
 
 class ChatSessionUpdate(BaseModel):
     title: Optional[str] = None
-    kb_id: Optional[int] = None
+    knowledge_base_id: Optional[int] = None  # Changed from kb_id
     model_config: Optional[Dict[str, Any]] = None
 
 class ChatSessionResponse(ChatSessionBase):
@@ -42,7 +42,7 @@ class ChatMessageResponse(ChatMessageBase):
     session_id: int
     role: str
     sources: Optional[List[Dict[str, Any]]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    message_metadata: Optional[Dict[str, Any]] = None  # Changed from metadata
     created_at: datetime
     
     class Config:

@@ -22,10 +22,12 @@ class KnowledgeBaseBase(BaseModel):
     """Knowledge base base model"""
     name: str = Field(..., description="Knowledge base name")
     description: Optional[str] = Field(None, description="Knowledge base description")
-    type: str = Field("general", description="Knowledge base type")
+    type: Optional[str] = Field(None, description="Knowledge base type")
     color: Optional[str] = Field(None, description="Color identifier")
     is_public: bool = Field(False, description="Whether it's public")
-    settings: Optional[Dict[str, Any]] = Field(None, description="Knowledge base settings")
+    embedding_model: Optional[str] = Field(None, description="Embedding model used")
+    vector_store: Optional[str] = Field(None, description="Vector store used")
+    kb_metadata: Optional[Dict[str, Any]] = Field(None, description="Knowledge base metadata")
     tags: Optional[List[str]] = Field(None, description="Tags")
 
 class KnowledgeBaseCreate(KnowledgeBaseBase):
@@ -43,62 +45,65 @@ class KnowledgeBaseResponse(KnowledgeBaseBase):
     """Knowledge base response model"""
     id: int
     status: str = Field("active", description="Knowledge base status")
-    created_by: int = Field(..., description="Creator ID")
+    created_by: Optional[int] = Field(None, description="Creator ID")
     created_at: datetime = Field(..., description="Creation time")
     updated_at: Optional[datetime] = Field(None, description="Update time")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DocumentBase(BaseModel):
     """Document base model"""
-    name: str = Field(..., description="Document name")
-    kb_id: int = Field(..., description="Knowledge base ID")
+    title: str = Field(..., description="Document title")  # Changed from 'name' to 'title' per init.sql
+    knowledge_base_id: int = Field(..., description="Knowledge base ID")  # Changed from 'kb_id'
 
 class DocumentCreate(DocumentBase):
     """Request model for creating a document"""
     file_path: str = Field(..., description="File path")
-    file_type: str = Field(..., description="File type")
-    file_size: int = Field(..., description="File size (bytes)")
+    file_type: Optional[str] = Field(None, description="File type")
+    file_size: Optional[int] = Field(None, description="File size (bytes)")
 
 class DocumentUpdate(BaseModel):
     """Request model for updating a document"""
-    name: Optional[str] = None
+    title: Optional[str] = None  # Changed from 'name' to 'title'
     status: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    doc_metadata: Optional[Dict[str, Any]] = Field(None, description="Document metadata")  # Keep as 'doc_metadata' per init.sql
 
 class DocumentResponse(DocumentBase):
     """Document response model"""
     id: int
-    file_type: str = Field(..., description="File type")
-    file_size: int = Field(..., description="File size (bytes)")
+    file_type: Optional[str] = Field(None, description="File type")
+    file_size: Optional[int] = Field(None, description="File size (bytes)")
     status: str = Field(..., description="Processing status")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata")
-    created_by: int = Field(..., description="Creator ID")
+    page_count: Optional[int] = Field(None, description="Page count")
+    chunk_count: int = Field(0, description="Chunk count")
+    doc_metadata: Optional[Dict[str, Any]] = Field(None, description="Document metadata")  # Keep as 'doc_metadata' per init.sql
+    created_by: Optional[int] = Field(None, description="Creator ID")
     created_at: datetime = Field(..., description="Creation time")
     updated_at: Optional[datetime] = Field(None, description="Update time")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DocumentChunkBase(BaseModel):
     """Document chunk base model"""
-    doc_id: int = Field(..., description="Document ID")
-    content: str = Field(..., description="Chunk content")
+    document_id: int = Field(..., description="Document ID")
+    knowledge_base_id: int = Field(..., description="Knowledge base ID")
     chunk_index: int = Field(..., description="Chunk index")
+    chunk_text: str = Field(..., description="Chunk content")
+    page_number: Optional[int] = Field(None, description="Page number")
 
 class DocumentChunkCreate(DocumentChunkBase):
     """Request model for creating a document chunk"""
-    embedding_id: str = Field(..., description="Vector ID")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata")
+    vector_id: Optional[str] = Field(None, description="Vector ID")  # Changed from 'embedding_id' to 'vector_id' per init.sql
+    chunk_metadata: Optional[Dict[str, Any]] = Field(None, description="Chunk metadata")
 
 class DocumentChunkResponse(DocumentChunkBase):
     """Document chunk response model"""
     id: int
-    embedding_id: str = Field(..., description="Vector ID")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata")
+    vector_id: Optional[str] = Field(None, description="Vector ID")  # Changed from 'embedding_id' to 'vector_id' per init.sql
+    chunk_metadata: Optional[Dict[str, Any]] = Field(None, description="Chunk metadata")
     created_at: datetime = Field(..., description="Creation time")
-    updated_at: Optional[datetime] = Field(None, description="Update time")
 
     class Config:
-        orm_mode = True 
+        from_attributes = True 

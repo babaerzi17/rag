@@ -8,281 +8,128 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class ModelConfig:
+    """模型配置类"""
+    def __init__(self, name: str, provider: str, model_name: str, api_key: str, base_url: str = None, config: Dict[str, Any] = None):
+        self.name = name
+        self.provider = provider
+        self.model_name = model_name
+        self.api_key = api_key
+        self.base_url = base_url
+        self.config = config or {}
+
 class LLMService:
-    def __init__(self, default_provider: str = "deepseek"):
-        """Initialize LLM service"""
-        self.default_provider = default_provider
-        self.clients = {}
-        self._init_clients()
+    """大语言模型服务"""
     
-    def _init_clients(self):
-        """Initialize various LLM clients"""
-        # DeepSeek client
-        deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
-        if deepseek_api_key:
-            self.clients["deepseek"] = AsyncOpenAI(
-                api_key=deepseek_api_key,
-                base_url="https://api.deepseek.com/v1"
-            )
-        
-        # OpenAI client
+    def __init__(self):
+        self.models = {}
+        self.default_model = None
+        # 从环境变量或配置加载模型
+        self._load_default_models()
+    
+    def _load_default_models(self):
+        """加载默认模型配置"""
+        # OpenAI 模型
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if openai_api_key:
-            self.clients["openai"] = AsyncOpenAI(
+            self.add_model(ModelConfig(
+                name="gpt-3.5-turbo",
+                provider="openai",
+                model_name="gpt-3.5-turbo",
                 api_key=openai_api_key,
                 base_url="https://api.openai.com/v1"
-            )
-        
-        # Custom client (supports other OpenAI compatible APIs)
-        custom_base_url = os.getenv("CUSTOM_LLM_BASE_URL")
-        custom_api_key = os.getenv("CUSTOM_LLM_API_KEY")
-        if custom_base_url and custom_api_key:
-            self.clients["custom"] = AsyncOpenAI(
-                api_key=custom_api_key,
-                base_url=custom_base_url
-            )
-    
-    async def chat_completion(
-        self,
-        messages: List[Dict[str, str]],
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 1000,
-        stream: bool = False
-    ) -> Dict[str, Any]:
-        """Chat completion interface"""
-        provider = provider or self.default_provider
-        client = self.clients.get(provider)
-        
-        if not client:
-            raise ValueError(f"未找到提供商 {provider} 的客户端配置")
+            ))
         
         # 设置默认模型
-        if not model:
-            model = self._get_default_model(provider)
+        if self.models:
+            self.default_model = list(self.models.keys())[0]
+    
+    def add_model(self, config: ModelConfig):
+        """添加模型配置"""
+        self.models[config.name] = config
+        
+    def get_model(self, name: str = None) -> ModelConfig:
+        """获取模型配置"""
+        if name is None:
+            name = self.default_model
+        return self.models.get(name)
+    
+    async def chat_completion(self, messages: List[Dict[str, str]], model_name: str = None, stream: bool = False, **kwargs) -> Any:
+        """聊天补全"""
+        config = self.get_model(model_name)
+        if not config:
+            raise ValueError(f"Model {model_name} not found")
+        
+        if config.provider == "openai":
+            return await self._openai_chat_completion(config, messages, stream, **kwargs)
+        else:
+            raise ValueError(f"Unsupported provider: {config.provider}")
+    
+    async def _openai_chat_completion(self, config: ModelConfig, messages: List[Dict[str, str]], stream: bool = False, **kwargs):
+        """OpenAI 聊天补全"""
+        client = AsyncOpenAI(
+            api_key=config.api_key,
+            base_url=config.base_url
+        )
         
         try:
-            if stream:
-                return await self._stream_chat_completion(
-                    client, messages, model, temperature, max_tokens
-                )
-            else:
-                return await self._chat_completion(
-                    client, messages, model, temperature, max_tokens
-                )
+            response = await client.chat.completions.create(
+                model=config.model_name,
+                messages=messages,
+                stream=stream,
+                **kwargs
+            )
+            return response
         except Exception as e:
-            logger.error(f"LLM调用失败: {str(e)}")
+            logger.error(f"OpenAI API 调用失败: {e}")
             raise
-    
-    async def _chat_completion(
-        self,
-        client: AsyncOpenAI,
-        messages: List[Dict[str, str]],
-        model: str,
-        temperature: float,
-        max_tokens: int
-    ) -> Dict[str, Any]:
-        """非流式聊天完成"""
-        response = await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-        
-        return {
-            "content": response.choices[0].message.content,
-            "usage": {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens
-            },
-            "model": response.model,
-            "finish_reason": response.choices[0].finish_reason
-        }
-    
-    async def _stream_chat_completion(
-        self,
-        client: AsyncOpenAI,
-        messages: List[Dict[str, str]],
-        model: str,
-        temperature: float,
-        max_tokens: int
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """流式聊天完成"""
-        stream = await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=True
-        )
-        
-        async for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                yield {
-                    "content": chunk.choices[0].delta.content,
-                    "finish_reason": chunk.choices[0].finish_reason
-                }
-    
-    def _get_default_model(self, provider: str) -> str:
-        """获取默认模型"""
-        default_models = {
-            "deepseek": "deepseek-chat",
-            "openai": "gpt-3.5-turbo",
-            "custom": "gpt-3.5-turbo"
-        }
-        return default_models.get(provider, "gpt-3.5-turbo")
-    
-    def get_available_providers(self) -> List[str]:
-        """获取可用的提供商列表"""
-        return list(self.clients.keys())
-    
-    def get_available_models(self, provider: str) -> List[str]:
-        """获取指定提供商的可用模型列表"""
-        model_lists = {
-            "deepseek": [
-                "deepseek-chat",
-                "deepseek-coder"
-            ],
-            "openai": [
-                "gpt-4",
-                "gpt-4-turbo",
-                "gpt-3.5-turbo",
-                "gpt-3.5-turbo-16k"
-            ],
-            "custom": [
-                "gpt-3.5-turbo",
-                "gpt-4",
-                "qwen-turbo",
-                "qwen-plus"
-            ]
-        }
-        return model_lists.get(provider, [])
-    
-    def test_connection(self, provider: str) -> Dict[str, Any]:
-        """测试提供商连接"""
-        try:
-            client = self.clients.get(provider)
-            if not client:
-                return {
-                    "success": False,
-                    "error": f"未找到提供商 {provider} 的配置"
-                }
-            
-            # 这里可以添加实际的连接测试逻辑
-            return {
-                "success": True,
-                "provider": provider,
-                "message": "连接正常"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
 
 class RAGChatService:
-    def __init__(self, rag_service, llm_service):
-        """初始化RAG聊天服务"""
-        self.rag_service = rag_service
-        self.llm_service = llm_service
+    """RAG 聊天服务"""
     
-    async def chat(
-        self,
-        query: str,
-        kb_id: Optional[int] = None,
-        chat_history: Optional[List[Dict[str, str]]] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 1000,
-        top_k: int = 5
-    ) -> Dict[str, Any]:
-        """RAG聊天接口"""
-        try:
-            # 1. 检索相关文档
-            search_results = self.rag_service.search(query, kb_id, top_k)
-            
-            # 2. 构建上下文
-            context = self._build_context(search_results)
-            
-            # 3. 构建消息
-            messages = self._build_messages(query, context, chat_history)
-            
-            # 4. 调用LLM
-            response = await self.llm_service.chat_completion(
-                messages=messages,
-                provider=provider,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            
-            # 5. 格式化返回结果
-            return {
-                "answer": response["content"],
-                "sources": self._format_sources(search_results),
-                "usage": response.get("usage", {}),
-                "model": response.get("model", "")
-            }
-            
-        except Exception as e:
-            logger.error(f"RAG聊天失败: {str(e)}")
-            raise
-    
-    def _build_context(self, search_results: List[Dict[str, Any]]) -> str:
-        """构建上下文"""
-        if not search_results:
-            return "没有找到相关的参考文档。"
+    def __init__(self, llm_service: LLMService = None):
+        self.llm_service = llm_service or LLMService()
         
-        context_parts = []
-        for i, result in enumerate(search_results, 1):
-            content = result["content"]
-            doc_metadata = result["metadata"]  # This field name remains "metadata" in search results
-            score = result["similarity_score"]
-            
-            context_parts.append(
-                f"文档片段 {i} (相似度: {score:.2f}):\n{content}\n"
-            )
+    async def chat_with_knowledge(self, 
+                                question: str, 
+                                knowledge_base_id: int,
+                                chat_history: List[Dict[str, str]] = None,
+                                model_name: str = None,
+                                stream: bool = False) -> Any:
+        """基于知识库的聊天"""
         
-        return "\n".join(context_parts)
-    
-    def _build_messages(
-        self,
-        query: str,
-        context: str,
-        chat_history: Optional[List[Dict[str, str]]] = None
-    ) -> List[Dict[str, str]]:
-        """构建消息列表"""
-        system_prompt = f"""你是一个专业的AI助手，基于以下知识库内容回答问题：
-
-{context}
-
-请基于上述信息回答用户问题，如果信息不足请说明。回答要准确、简洁、有用。"""
-
-        messages = [{"role": "system", "content": system_prompt}]
+        # TODO: 实现知识检索逻辑
+        # 1. 从知识库中检索相关文档
+        # 2. 构建上下文
+        # 3. 调用LLM生成回答
         
-        # 添加聊天历史
+        # 临时实现：直接调用LLM
+        messages = []
         if chat_history:
             messages.extend(chat_history)
         
-        # 添加当前查询
-        messages.append({"role": "user", "content": query})
+        messages.append({"role": "user", "content": question})
         
-        return messages
+        return await self.llm_service.chat_completion(
+            messages=messages,
+            model_name=model_name,
+            stream=stream
+        )
     
-    def _format_sources(self, search_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """格式化参考来源"""
-        sources = []
-        for result in search_results:
-            doc_metadata = result["metadata"]  # This field name remains "metadata" in search results
-            sources.append({
-                "id": result["id"],
-                "title": doc_metadata.get("file_path", "未知文档"),
-                "content": result["content"][:200] + "..." if len(result["content"]) > 200 else result["content"],
-                "similarity_score": result["similarity_score"],
-                "metadata": doc_metadata
-            })
-        return sources
+    async def stream_chat_with_knowledge(self, 
+                                       question: str, 
+                                       knowledge_base_id: int,
+                                       chat_history: List[Dict[str, str]] = None,
+                                       model_name: str = None) -> AsyncGenerator[str, None]:
+        """流式聊天"""
+        response = await self.chat_with_knowledge(
+            question=question,
+            knowledge_base_id=knowledge_base_id,
+            chat_history=chat_history,
+            model_name=model_name,
+            stream=True
+        )
+        
+        async for chunk in response:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content

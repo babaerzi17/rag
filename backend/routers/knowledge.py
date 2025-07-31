@@ -22,15 +22,15 @@ try:
     from ..services.document_service import DocumentService
     from ..logger import get_logger
 except ImportError:
-    # Try absolute imports
-    from backend.database import get_db
-    from backend.models.knowledge import KnowledgeBase, Document, DocumentChunk, KnowledgeBaseStatus, DocumentStatus
-    from backend.models.user import User
-    from backend.auth.security import get_current_user
-    from backend.schemas.knowledge import *  # Import knowledge schemas directly
-    from backend.services.knowledge_service import KnowledgeService
-    from backend.services.document_service import DocumentService
-    from backend.logger import get_logger
+    # Try using absolute imports
+    from ..database import get_db
+    from ..models.knowledge import KnowledgeBase, Document, DocumentChunk, KnowledgeBaseStatus, DocumentStatus
+    from ..models.user import User
+    from ..auth.security import get_current_user
+    from ..schemas.knowledge import *  # Import knowledge schemas directly
+    from ..services.knowledge_service import KnowledgeService
+    from ..services.document_service import DocumentService
+    from ..logger import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -146,10 +146,11 @@ async def upload_document(
         db = next(get_db())  # 获取数据库会话
         for chunk_info in chunk_data:
             chunk = DocumentChunk(
-                doc_id=doc.id,
-                content=chunk_info["content"],
+                document_id=doc.id,
+                knowledge_base_id=kb_id,
+                chunk_text=chunk_info["content"],
                 chunk_index=chunk_info["chunk_index"],
-                embedding_id=chunk_info["embedding_id"],
+                vector_id=chunk_info["embedding_id"],
                 chunk_metadata=chunk_info["metadata"]
             )
             db.add(chunk)

@@ -4,7 +4,7 @@ from typing import List, Optional
 import json
 
 from ..database import get_db
-from ..models.knowledge import ChatSession, ChatMessage
+from ..models.chat import ChatSession, ChatMessage
 from ..models.user import User
 from ..auth.security import get_current_user
 from ..services.llm_service import LLMService, RAGChatService
@@ -16,7 +16,7 @@ router = APIRouter()
 # 初始化服务
 llm_service = LLMService()
 rag_service = RAGService()
-rag_chat_service = RAGChatService(rag_service, llm_service)
+rag_chat_service = RAGChatService(llm_service)
 
 @router.get("/sessions", response_model=List[schemas.ChatSessionResponse])
 async def get_chat_sessions(
