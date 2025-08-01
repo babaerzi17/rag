@@ -10,7 +10,7 @@ const AuthLayout = () => import('@/components/common/AuthLayout.vue')
 // 导入页面组件
 const MainHome = () => import('@/views/MainHome.vue')
 const Login = () => import('@/views/auth/Login.vue')
-const KnowledgeLibrary = () => import('@/views/knowledge/KnowledgeLibrary.vue')
+const KnowledgeManagement = () => import('@/views/knowledge/KnowledgeManagement.vue')
 const DocumentManagement = () => import('@/views/document/DocumentManagement.vue')
 const ChatInterface = () => import('@/views/chat/ChatInterface.vue')
 const ModelManagement = () => import('@/views/model/ModelManagement.vue')
@@ -22,11 +22,11 @@ const Unauthorized = () => import('@/views/Unauthorized.vue')
 
 // 定义所有菜单路由
 const menuRoutes = [
-  { path: '/knowledge', name: 'Knowledge', component: () => import('../views/knowledge/KnowledgeLibrary.vue'), meta: { permission: 'menu:knowledge' } },
-  { path: '/document', name: 'Document', component: () => import('../views/document/DocumentManagement.vue'), meta: { permission: 'menu:document' } },
-  { path: '/chat', name: 'Chat', component: () => import('../views/chat/ChatInterface.vue'), meta: { permission: 'menu:chat' } },
-  { path: '/model', name: 'Model', component: () => import('../views/model/ModelManagement.vue'), meta: { permission: 'menu:model' } },
-  { path: '/settings', name: 'Settings', component: () => import('../views/settings/Settings.vue'), meta: { permission: 'menu:settings' } },
+  { path: '/knowledge', name: 'Knowledge', component: () => import('@/views/knowledge/KnowledgeManagement.vue'), meta: { permission: 'menu:knowledge' } },
+  { path: '/document', name: 'Document', component: () => import('@/views/document/DocumentManagement.vue'), meta: { permission: 'menu:document' } },
+  { path: '/chat', name: 'Chat', component: () => import('@/views/chat/ChatInterface.vue'), meta: { permission: 'menu:chat' } },
+  { path: '/model', name: 'Model', component: () => import('@/views/model/ModelManagement.vue'), meta: { permission: 'menu:model' } },
+  { path: '/settings', name: 'Settings', component: () => import('@/views/settings/Settings.vue'), meta: { permission: 'menu:settings' } },
   // 添加更多基于init.sql的菜单
 ];
 
@@ -71,7 +71,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'knowledge',
         name: 'Knowledge',
-        component: KnowledgeLibrary,
+        component: KnowledgeManagement,
         meta: { 
           title: '知识库管理',
           icon: 'mdi-book-multiple',
