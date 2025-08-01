@@ -1,10 +1,10 @@
- import os
 import json
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import httpx
 import openai
 from openai import AsyncOpenAI
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
