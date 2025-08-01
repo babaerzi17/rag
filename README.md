@@ -1,67 +1,145 @@
-# RAG 知识库系统
+# 项目名称：知识中心 RAG 应用程序
 
-## 1. 项目概述
-本项目是一个基于检索增强生成 (RAG) 技术的知识库系统，旨在为用户提供高效的知识管理、智能问答、文档管理、模型管理以及权限控制等功能。系统采用前后端分离架构，前端使用 Vue 3、Vuetify 和 Pinia，后端使用 Python/FastAPI (待确认具体技术栈)。
+## 项目概述
 
-## 2. 功能模块
-### 2.1 用户认证与授权 (Auth)
-- **登录**: 用户通过账号密码进行系统登录。
-- **权限管理**: 基于角色的访问控制 (RBAC)，管理用户、角色和权限。
-  - 用户管理: 创建、编辑、删除用户。
-  - 角色管理: 创建、编辑、删除角色，分配权限。
-  - 权限管理: 定义系统中的各项操作权限。
-- **退出登录**: 用户安全退出系统。
+这是一个知识中心应用程序，结合了 RAG (Retrieval-Augmented Generation) 技术，旨在提供一个智能问答和知识管理平台。该项目包含一个基于 FastAPI 的后端和一个基于 Vue.js 的前端。
 
-### 2.2 知识库管理 (Knowledge)
-- **知识库创建**: 创建和管理不同的知识库。
-- **知识库内容**: 向知识库中上传和管理文档、数据等。
-- **知识检索**: 在知识库中进行高效的知识检索。
+## 功能模块
 
-### 2.3 文档管理 (Document)
-- **文档上传**: 支持多种格式文档的上传。
-- **文档预览**: 在线预览文档内容。
-- **文档编辑**: 对文档进行编辑和版本管理。
-- **文档分类与标签**: 对文档进行分类和打标签，便于管理和检索。
+- **用户认证与授权**：安全的登录、注册和权限管理。
+- **知识库管理**：上传、存储和管理各类文档（PDF, DOCX, Markdown 等）。
+- **文档分块与索引**：自动将文档分块并创建向量索引，以便 RAG 模型检索。
+- **智能问答**：用户可以通过自然语言提问，系统将从知识库中检索相关信息并生成回答。
+- **A/B 测试**：支持对不同模型或策略进行 A/B 测试。
+- **模型管理**：管理和配置不同的 LLM 模型。
 
-### 2.4 智能问答 (Chat)
-- **RAG 问答**: 结合检索增强生成技术，根据知识库内容进行智能问答。
-- **对话历史**: 记录和管理用户的对话历史。
-- **新对话**: 开始新的问答会话。
+## 技术栈
 
-### 2.5 模型管理 (Model)
-- **模型配置**: 配置和管理系统使用的AI模型。
-- **模型训练 (未来功能)**: 可能支持模型的训练和优化。
+### 后端 (Python/FastAPI)
 
-### 2.6 系统设置 (Settings)
-- **个人设置**: 用户可以修改个人信息、密码等。
-- **主题切换**: 切换亮色/暗色主题。
-- **其他系统配置**: 可能包含其他系统级别的配置项。
+- **FastAPI**：现代、快速（高性能）的 Web 框架，用于构建 API。
+- **SQLAlchemy**：Python SQL 工具包和 ORM，用于数据库交互。
+- **PostgreSQL**：关系型数据库（你可以根据配置更改为其他数据库）。
+- **ChromaDB**：开源嵌入数据库，用于存储和检索向量。
+- **Sentence-Transformers**：用于生成文本嵌入。
+- **LangChain**：用于构建基于 LLM 的应用程序的框架。
+- **Passlib, python-jose**：用于身份验证和安全。
+- **Pydantic**：用于数据验证和设置管理。
 
-## 3. 技术栈
-### 前端
-- **框架**: Vue 3
-- **UI 组件库**: Vuetify
-- **状态管理**: Pinia
-- **路由**: Vue Router
-- **其他**: TypeScript, Vite
+### 前端 (Vue.js/Vite)
 
-### 后端 (待确认)
-- Python/FastAPI
-- PostgreSQL/MongoDB
-- Elasticsearch/Faiss
+- **Vue.js 3**：渐进式 JavaScript 框架，用于构建用户界面。
+- **Vite**：下一代前端工具，提供快速开发体验。
+- **Element Plus**：Vue 3 的组件库，用于构建美观的用户界面。
+- **Pinia**：Vue 的状态管理库。
+- **Vue Router**：Vue 的官方路由。
+- **Axios**：基于 Promise 的 HTTP 客户端。
+- **Socket.IO Client**：用于实时通信。
 
-## 4. 开发环境搭建
-(此处将包含详细的开发环境搭建步骤，例如安装 Node.js, Python, npm/yarn, pip, 依赖安装，启动命令等)
+## 安装与运行
 
-## 5. 使用说明
-(此处将包含各项功能的使用方法，例如如何登录、如何创建知识库、如何进行智能问答等)
+### 前提条件
 
-## 6. 贡献指南
-(此处将包含贡献代码的指南，例如代码规范、提交流程等)
+在开始之前，请确保你的系统已安装以下软件：
 
-## 7. 常见问题
-(此处将包含常见问题的解答)
+- **Python 3.8+**
+- **Node.js (LTS 版本)** 和 **npm (或 yarn, pnpm)**
+- **Git**
+- **PostgreSQL** 数据库（或其他你配置的数据库）
 
-## 8. 版本历史
-(此处将包含项目的版本更新记录)
+### 步骤 1: 克隆仓库
+
+```bash
+git clone <仓库地址>
+cd rag
+```
+
+### 步骤 2: 后端设置
+
+1.  **创建并激活虚拟环境**：
+    ```bash
+    cd backend
+    python -m venv venv
+    # Windows
+    .\venv\Scripts\activate
+    # macOS/Linux
+    source venv/bin/activate
+    ```
+
+2.  **安装 Python 依赖**：
+    ```bash
+    pip install -r requirements.txt --trusted-host mirrors.huaweicloud.com
+    ```
+
+3.  **配置数据库**：
+    - 确保你的 PostgreSQL 数据库正在运行。
+    - 根据 `backend/config/database.py` 或相关配置文件，设置数据库连接信息（例如，环境变量 `DATABASE_URL`）。
+
+4.  **运行数据库迁移 (Alembic)**：
+    ```bash
+    alembic upgrade head
+    ```
+
+5.  **启动后端服务**：
+    ```bash
+    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # 如果你的主入口文件不是 main.py，请相应调整
+    ```
+
+### 步骤 3: 前端设置
+
+1.  **进入前端目录**：
+    ```bash
+    cd ../frontend
+    ```
+
+2.  **安装 Node.js 依赖**：
+    ```bash
+    npm install
+    ```
+
+3.  **启动前端开发服务器**：
+    ```bash
+    npm run dev
+    ```
+
+    前端应用通常会在 `http://localhost:5173` (或类似端口) 启动。
+
+## 项目结构
+
+```
+rag/
+├── backend/               # 后端 FastAPI 应用
+│   ├── auth/              # 认证和安全模块
+│   ├── common/            # 通用工具和 CRUD 操作
+│   ├── config/            # 配置，如数据库连接
+│   ├── models/            # 数据库模型定义
+│   ├── routers/           # API 路由定义
+│   ├── schemas/           # Pydantic 数据模型
+│   ├── services/          # 业务逻辑服务
+│   ├── tests/             # 后端测试
+│   ├── utils/             # 工具函数
+│   ├── venv/              # Python 虚拟环境
+│   └── main.py            # 后端主入口文件
+├── frontend/              # 前端 Vue.js 应用
+│   ├── src/               # 源代码
+│   │   ├── api/           # API 请求封装
+│   │   ├── components/    # 可复用组件
+│   │   ├── router/        # Vue Router 配置
+│   │   ├── stores/        # Pinia 状态管理
+│   │   ├── types/         # TypeScript 类型定义
+│   │   ├── utils/         # 前端工具函数
+│   │   └── views/         # 页面组件
+│   └── package.json       # 前端依赖配置
+├── README.md              # 项目说明文档
+└── ...                    # 其他配置文件或脚本
+```
+
+## 贡献
+
+欢迎贡献！请查阅 `CONTRIBUTING.md` (如果存在) 获取更多信息。
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE) (或你选择的其他许可证)。
 
