@@ -1,10 +1,8 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON, BigInteger
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from enum import Enum
-
-Base = declarative_base()
+from .base import Base
 
 class KnowledgeBaseStatus(str, Enum):
     ACTIVE = "active"

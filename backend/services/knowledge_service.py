@@ -12,15 +12,15 @@ class KnowledgeService:
     def __init__(self, db: Session):
         self.db = db
     
-    def get_all(self, user_id: int, skip: int = 0, limit: int = 100) -> List[KnowledgeBaseResponse]:
-        """获取用户的知识库列表"""
-        knowledge_bases = (
-            self.db.query(KnowledgeBase)
-            .filter(KnowledgeBase.created_by == user_id)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+    def get_all(self, user_id: int, skip: int = 0, limit: int = 100, search: str = "") -> List[KnowledgeBaseResponse]:
+        """获取用户的知识库列表，支持按名称搜索"""
+        query = self.db.query(KnowledgeBase).filter(KnowledgeBase.created_by == user_id)
+        
+        if search:
+            query = query.filter(KnowledgeBase.name.ilike(f"%{search}%"))
+            
+        knowledge_bases = query.offset(skip).limit(limit).all()
+        
         logger.info(f"从数据库查询到的知识库数量: {len(knowledge_bases)}")
         if knowledge_bases:
             logger.info(f"第一个知识库对象: {knowledge_bases[0].__dict__}")

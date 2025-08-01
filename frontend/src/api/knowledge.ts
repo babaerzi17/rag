@@ -92,32 +92,32 @@ export const knowledgeApi = {
 
   // 获取知识库详情
   async getKnowledgeBase(id: string): Promise<KnowledgeBase> {
-    return api.get(`/knowledge-bases/${id}`)
+    return apiClient.get(`/knowledge-bases/${id}`)
   },
 
   // 创建知识库
   async createKnowledgeBase(data: CreateKnowledgeBaseRequest): Promise<KnowledgeBase> {
-    return api.post('/knowledge-bases', data)
+    return apiClient.post('/knowledge-bases', data)
   },
 
   // 更新知识库
   async updateKnowledgeBase(id: string, data: UpdateKnowledgeBaseRequest): Promise<KnowledgeBase> {
-    return api.put(`/knowledge-bases/${id}`, data)
+    return apiClient.put(`/knowledge-bases/${id}`, data)
   },
 
   // 删除知识库
   async deleteKnowledgeBase(id: string): Promise<void> {
-    return api.delete(`/knowledge-bases/${id}`)
+    return apiClient.delete(`/knowledge-bases/${id}`)
   },
 
   // 复制知识库
   async duplicateKnowledgeBase(id: string, name: string): Promise<KnowledgeBase> {
-    return api.post(`/knowledge-bases/${id}/duplicate`, { name })
+    return apiClient.post(`/knowledge-bases/${id}/duplicate`, { name })
   },
 
   // 导出知识库
   async exportKnowledgeBase(id: string, format: 'json' | 'csv' | 'xml' = 'json'): Promise<void> {
-    return api.download(`/knowledge-bases/${id}/export?format=${format}`, `knowledge-base-${id}.${format}`)
+    return apiClient.download(`/knowledge-bases/${id}/export?format=${format}`, `knowledge-base-${id}.${format}`)
   },
 
   // 导入知识库
@@ -125,17 +125,17 @@ export const knowledgeApi = {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('name', name)
-    return api.upload('/knowledge-bases/import', formData)
+    return apiClient.upload('/knowledge-bases/import', formData)
   },
 
   // 获取知识库统计信息
   async getKnowledgeBaseStats(id: string): Promise<KnowledgeBaseStats> {
-    return api.get(`/knowledge-bases/${id}/stats`)
+    return apiClient.get(`/knowledge-bases/${id}/stats`)
   },
 
   // 重建知识库索引
   async rebuildIndex(id: string): Promise<{ taskId: string }> {
-    return api.post(`/knowledge-bases/${id}/rebuild-index`)
+    return apiClient.post(`/knowledge-bases/${id}/rebuild-index`)
   },
 
   // 获取索引状态
@@ -146,12 +146,12 @@ export const knowledgeApi = {
     startedAt?: string
     completedAt?: string
   }> {
-    return api.get(`/knowledge-bases/${id}/index-status`)
+    return apiClient.get(`/knowledge-bases/${id}/index-status`)
   },
 
   // 清空知识库
   async clearKnowledgeBase(id: string): Promise<void> {
-    return api.post(`/knowledge-bases/${id}/clear`)
+    return apiClient.post(`/knowledge-bases/${id}/clear`)
   },
 
   // 获取知识库类型选项
@@ -161,7 +161,7 @@ export const knowledgeApi = {
     description: string
     icon: string
   }>> {
-    return api.get('/knowledge-bases/types')
+    return apiClient.get('/knowledge-bases/types')
   },
 
   // 获取向量模型选项
@@ -177,7 +177,7 @@ export const knowledgeApi = {
       memoryUsage: number
     }
   }>> {
-    return api.get('/knowledge-bases/vector-models')
+    return apiClient.get('/knowledge-bases/vector-models')
   },
 
   // 测试知识库查询
@@ -199,7 +199,7 @@ export const knowledgeApi = {
     queryTime: number
     totalResults: number
   }> {
-    return api.post(`/knowledge-bases/${id}/test-query`, { query, ...options })
+    return apiClient.post(`/knowledge-bases/${id}/test-query`, { query, ...options })
   },
 
   // 获取知识库权限
@@ -210,7 +210,7 @@ export const knowledgeApi = {
     canShare: boolean
     canManage: boolean
   }> {
-    return api.get(`/knowledge-bases/${id}/permissions`)
+    return apiClient.get(`/knowledge-bases/${id}/permissions`)
   },
 
   // 分享知识库
@@ -218,7 +218,7 @@ export const knowledgeApi = {
     userId: string
     permission: 'read' | 'write' | 'manage'
   }>): Promise<void> {
-    return api.post(`/knowledge-bases/${id}/share`, { users })
+    return apiClient.post(`/knowledge-bases/${id}/share`, { users })
   },
 
   // 获取知识库分享信息
@@ -233,27 +233,27 @@ export const knowledgeApi = {
       sharedAt: string
     }>
   }> {
-    return api.get(`/knowledge-bases/${id}/sharing`)
+    return apiClient.get(`/knowledge-bases/${id}/sharing`)
   },
 
   // 更新分享权限
   async updateSharingPermission(id: string, userId: string, permission: string): Promise<void> {
-    return api.put(`/knowledge-bases/${id}/sharing/${userId}`, { permission })
+    return apiClient.put(`/knowledge-bases/${id}/sharing/${userId}`, { permission })
   },
 
   // 移除分享
   async removeSharing(id: string, userId: string): Promise<void> {
-    return api.delete(`/knowledge-bases/${id}/sharing/${userId}`)
+    return apiClient.delete(`/knowledge-bases/${id}/sharing/${userId}`)
   },
 
   // 生成公开链接
   async generatePublicLink(id: string, expiresAt?: string): Promise<{ publicLink: string }> {
-    return api.post(`/knowledge-bases/${id}/public-link`, { expiresAt })
+    return apiClient.post(`/knowledge-bases/${id}/public-link`, { expiresAt })
   },
 
   // 撤销公开链接
   async revokePublicLink(id: string): Promise<void> {
-    return api.delete(`/knowledge-bases/${id}/public-link`)
+    return apiClient.delete(`/knowledge-bases/${id}/public-link`)
   },
 
   // 获取知识库活动日志
@@ -276,7 +276,7 @@ export const knowledgeApi = {
     metadata?: Record<string, any>
     timestamp: string
   }>> {
-    return api.paginate(`/knowledge-bases/${id}/activity`, params)
+    return apiClient.paginate(`/knowledge-bases/${id}/activity`, params)
   },
 
   // 获取知识库备份列表
@@ -292,27 +292,27 @@ export const knowledgeApi = {
       name: string
     }
   }>> {
-    return api.get(`/knowledge-bases/${id}/backups`)
+    return apiClient.get(`/knowledge-bases/${id}/backups`)
   },
 
   // 创建知识库备份
   async createKnowledgeBaseBackup(id: string, name?: string): Promise<{ backupId: string }> {
-    return api.post(`/knowledge-bases/${id}/backups`, { name })
+    return apiClient.post(`/knowledge-bases/${id}/backups`, { name })
   },
 
   // 恢复知识库备份
   async restoreKnowledgeBaseBackup(id: string, backupId: string): Promise<{ taskId: string }> {
-    return api.post(`/knowledge-bases/${id}/backups/${backupId}/restore`)
+    return apiClient.post(`/knowledge-bases/${id}/backups/${backupId}/restore`)
   },
 
   // 删除知识库备份
   async deleteKnowledgeBaseBackup(id: string, backupId: string): Promise<void> {
-    return api.delete(`/knowledge-bases/${id}/backups/${backupId}`)
+    return apiClient.delete(`/knowledge-bases/${id}/backups/${backupId}`)
   },
 
   // 下载知识库备份
   async downloadKnowledgeBaseBackup(id: string, backupId: string): Promise<void> {
-    return api.download(`/knowledge-bases/${id}/backups/${backupId}/download`, `kb-backup-${backupId}.zip`)
+    return apiClient.download(`/knowledge-bases/${id}/backups/${backupId}/download`, `kb-backup-${backupId}.zip`)
   },
 }
 

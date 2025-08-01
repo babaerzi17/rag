@@ -85,14 +85,6 @@
               编辑
             </el-button>
             <el-button
-              type="warning"
-              size="small"
-              :icon="CopyDocument"
-              @click="confirmDuplicate(row)"
-            >
-              复制
-            </el-button>
-            <el-button
               type="danger"
               size="small"
               :icon="Delete"
@@ -193,27 +185,6 @@
         </span>
       </template>
     </el-dialog>
-
-    <!-- 复制知识库对话框 -->
-    <el-dialog
-      v-model="duplicateDialogVisible"
-      title="复制知识库"
-      width="400px"
-    >
-      <el-form ref="duplicateFormRef" :model="duplicateForm" :rules="duplicateRules">
-        <el-form-item label="知识库名称" prop="name">
-          <el-input v-model="duplicateForm.name" placeholder="请输入新知识库名称" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="duplicateDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitDuplicate" :loading="submitting">
-            复制
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -231,8 +202,7 @@ import {
   Refresh,
   Edit,
   Delete,
-  Check,
-  CopyDocument
+  Check
 } from '@element-plus/icons-vue'
 import { knowledgeApi, type KnowledgeBase } from '@/api/knowledge'
 
@@ -242,13 +212,11 @@ const submitting = ref(false)
 const knowledgeBaseList = ref<KnowledgeBase[]>([])
 const searchQuery = ref('')
 const dialogVisible = ref(false)
-const duplicateDialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const currentKB = ref<KnowledgeBase | null>(null)
 
 // 表单引用
 const kbFormRef = ref<FormInstance>()
-const duplicateFormRef = ref<FormInstance>()
 
 // 分页数据
 const pagination = reactive({
@@ -267,11 +235,6 @@ const kbForm = reactive({
   isPublic: false
 })
 
-// 复制表单数据
-const duplicateForm = reactive({
-  name: ''
-})
-
 // 表单验证规则
 const kbFormRules: FormRules = {
   name: [
@@ -283,13 +246,6 @@ const kbFormRules: FormRules = {
   ],
   type: [
     { required: true, message: '请选择知识库类型', trigger: 'change' }
-  ]
-}
-
-const duplicateRules: FormRules = {
-  name: [
-    { required: true, message: '请输入知识库名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '名称长度在 2 到 50 个字符', trigger: 'blur' }
   ]
 }
 
@@ -466,30 +422,6 @@ const confirmDelete = (kb: KnowledgeBase) => {
   }).catch(() => {
     // 用户取消删除
   })
-}
-
-const confirmDuplicate = (kb: KnowledgeBase) => {
-  currentKB.value = kb
-  duplicateForm.name = `${kb.name} (副本)`
-  duplicateDialogVisible.value = true
-}
-
-const submitDuplicate = async () => {
-  if (!duplicateFormRef.value || !currentKB.value) return
-  
-  try {
-    await duplicateFormRef.value.validate()
-    submitting.value = true
-    
-    await knowledgeApi.duplicateKnowledgeBase(currentKB.value.id.toString(), duplicateForm.name)
-    ElMessage.success('知识库复制成功')
-    duplicateDialogVisible.value = false
-    fetchKnowledgeBases()
-  } catch (error: any) {
-    ElMessage.error('复制知识库失败：' + (error.message || '未知错误'))
-  } finally {
-    submitting.value = false
-  }
 }
 
 // 获取状态类型

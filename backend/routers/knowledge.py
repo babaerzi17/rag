@@ -60,7 +60,7 @@ async def get_knowledge_bases(
         limit = pageSize
         
     logger.info(f"获取知识库列表: user_id={current_user.id}, skip={skip}, limit={limit}, search={search}")
-    return knowledge_service.get_all(current_user.id, skip, limit)
+    return knowledge_service.get_all(current_user.id, skip, limit, search=search)
 
 @router.post("/", response_model=KnowledgeBaseResponse)
 async def create_knowledge_base(
