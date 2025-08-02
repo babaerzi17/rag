@@ -9,16 +9,12 @@ import logging
 
 # 使用绝对导入
 try:
-    from database import get_db
-    from services.knowledge_service import KnowledgeService
-    from services.document_service import DocumentService
-except ImportError:
-    try:
-        from backend.database import get_db
-        from backend.services.knowledge_service import KnowledgeService
-        from backend.services.document_service import DocumentService
-    except ImportError as e:
-        print(f"导入服务类失败: {e}")
+    from backend.config.database import get_db
+    from backend.services.knowledge_service import KnowledgeService
+    from backend.services.document_service import DocumentService
+except ImportError as e:
+    print(f"导入服务类失败: {e}")
+    raise
 
 # 创建一个日志记录器
 logger = logging.getLogger(__name__)

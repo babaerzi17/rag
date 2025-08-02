@@ -1,1050 +1,1202 @@
 <template>
   <div class="document-management">
-    <!-- 页面标题栏 -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold text-primary mb-2">
-          文档管理
-        </h1>
-        <p class="text-body-1 text-medium-emphasis">
-          上传、管理和处理文档，支持PDF、Word、Excel等多种格式
-        </p>
+    <!-- 操作栏 -->
+    <div class="toolbar">
+      <div class="search-bar">
+        <el-select
+          v-model="knowledgeBaseFilter"
+          placeholder="选择知识库"
+          clearable
+          style="width: 180px; margin-right: 10px"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="kb in knowledgeBaseOptions"
+            :key="kb.value"
+            :label="kb.label"
+            :value="kb.value"
+          />
+        </el-select>
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索文档名称"
+          :prefix-icon="Search"
+          @keyup.enter="handleSearch"
+          clearable
+          style="width: 300px"
+        />
+        <el-button :icon="Search" @click="handleSearch" size="small" style="margin-left: 10px">
+          搜索
+        </el-button>
       </div>
-      <v-btn
-        color="primary"
-        variant="elevated"
-        prepend-icon="mdi-upload"
-        @click="showUploadDialog = true"
-      >
-        上传文档
-      </v-btn>
+      <div class="actions">
+        <el-button type="primary" :icon="Upload" @click="showUploadDialog" size="small">
+          上传文档
+        </el-button>
+        <el-button type="success" :icon="FolderAdd" @click="showBatchImportDialog" size="small">
+          批量导入
+        </el-button>
+        <el-button :icon="Refresh" @click="refreshDocuments" size="small">
+          刷新
+        </el-button>
+    </div>
+                </div>
+
+    <!-- 筛选栏 -->
+    <div class="filters" style="display: none;">
+      <!-- Removed: knowledge base filter, now in search-bar -->
+      <!-- Removed: status filter -->
+      <!-- Removed: type filter -->
     </div>
 
-    <!-- 统计卡片 -->
-    <v-row class="mb-6">
-      <v-col
-        v-for="stat in documentStats"
-        :key="stat.title"
-        cols="12"
-        sm="6"
-        md="3"
+    <!-- 文档表格 -->
+    <el-card shadow="never">
+      <el-table
+        :data="documentList"
+        v-loading="loading"
+        stripe
+        style="width: 100%"
+        max-height="calc(100vh - 350px)"
+        @selection-change="handleSelectionChange"
       >
-        <v-card variant="outlined" class="stat-card">
-          <v-card-text>
-            <div class="d-flex align-center">
-              <div class="flex-grow-1">
-                <div class="text-caption text-medium-emphasis mb-1">
-                  {{ stat.title }}
-                </div>
-                <div class="text-h5 font-weight-bold text-primary">
-                  {{ stat.value }}
-                </div>
-                <div class="text-caption" :class="`text-${stat.trend === 'up' ? 'success' : 'error'}`">
-                  <v-icon size="12" class="mr-1">
-                    {{ stat.trend === 'up' ? 'mdi-trending-up' : 'mdi-trending-down' }}
-                  </v-icon>
-                  {{ stat.change }}
-                </div>
-              </div>
-              <v-avatar
-                :color="stat.color"
-                size="48"
-                class="stat-icon"
-              >
-                <v-icon color="white" size="24">
-                  {{ stat.icon }}
-                </v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- 搜索和过滤栏 -->
-    <v-card class="mb-6" variant="outlined">
-      <v-card-text>
-        <v-row align="center">
-          <v-col cols="12" md="3">
-            <v-text-field
-              v-model="searchQuery"
-              placeholder="搜索文档..."
-              prepend-inner-icon="mdi-magnify"
-              variant="outlined"
-              density="compact"
-              hide-details
-              clearable
-              @keyup.enter="searchDocuments"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="knowledgeBaseFilter"
-              :items="knowledgeBaseOptions"
-              label="知识库"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="statusFilter"
-              :items="statusOptions"
-              label="处理状态"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="typeFilter"
-              :items="typeOptions"
-              label="文档类型"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="sortBy"
-              :items="sortOptions"
-              label="排序方式"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-          <v-col cols="12" md="1">
-            <div class="d-flex gap-2">
-              <v-btn
-                variant="outlined"
-                icon="mdi-refresh"
-                @click="refreshDocuments"
-                :loading="loading"
-                title="刷新"
-              />
-              <v-btn
-                variant="outlined"
-                icon="mdi-filter-remove"
-                @click="resetFilters"
-                title="重置筛选"
-              />
-            </div>
-          </v-col>
-        </v-row>
+        <el-table-column type="selection" width="55" />
         
-        <!-- 高级筛选选项 -->
-        <v-expand-transition>
-          <div v-if="showAdvancedFilters" class="mt-4">
-            <v-divider class="mb-4" />
-            <v-row>
-              <v-col cols="12" md="3">
-                <v-menu
-                  ref="dateMenu"
-                  v-model="dateMenuOpen"
-                  :close-on-content-click="false"
-                  transition="scale-transition"
-                  offset-y
-                >
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-model="dateRangeText"
-                      label="上传日期范围"
-                      prepend-inner-icon="mdi-calendar"
-                      readonly
-                      v-bind="props"
-                      variant="outlined"
-                      density="compact"
-                      hide-details
-                    />
+        <el-table-column label="序号" width="80">
+          <template #default="scope">
+            {{ pagination.pageSize * (pagination.page - 1) + scope.$index + 1 }}
                   </template>
-                  <v-date-picker
-                    v-model="dateRange"
-                    range
-                    @update:model-value="dateMenuOpen = false"
-                  />
-                </v-menu>
-              </v-col>
-              <v-col cols="12" md="3">
-                <v-text-field
-                  v-model="sizeFilter.min"
-                  label="最小文件大小 (KB)"
-                  type="number"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-              <v-col cols="12" md="3">
-                <v-text-field
-                  v-model="sizeFilter.max"
-                  label="最大文件大小 (KB)"
-                  type="number"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-              <v-col cols="12" md="3">
-                <v-autocomplete
-                  v-model="tagFilter"
-                  :items="availableTags"
-                  label="标签"
-                  multiple
-                  chips
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-            </v-row>
-          </div>
-        </v-expand-transition>
+        </el-table-column>
         
-        <div class="d-flex justify-end mt-2">
-          <v-btn
-            variant="text"
-            size="small"
-            @click="showAdvancedFilters = !showAdvancedFilters"
-          >
-            {{ showAdvancedFilters ? '收起高级筛选' : '显示高级筛选' }}
-            <v-icon right>
-              {{ showAdvancedFilters ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-            </v-icon>
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
-
-    <!-- 文档列表 -->
-    <v-card variant="outlined">
-      <v-data-table
-        :headers="tableHeaders"
-        :items="filteredDocuments"
-        :search="searchQuery"
-        :loading="loading"
-        item-key="id"
-        class="document-table"
-      >
-        <!-- 文档名称列 -->
-        <template v-slot:item.name="{ item }">
-          <div class="d-flex align-center">
-            <v-icon
-              :color="getFileTypeColor(item.type)"
-              class="mr-3"
-              size="32"
-            >
-              {{ getFileTypeIcon(item.type) }}
-            </v-icon>
-            <div>
-              <div class="font-weight-bold">{{ item.name }}</div>
-              <div class="text-caption text-medium-emphasis">
-                {{ formatFileSize(item.size) }}
-              </div>
+        <el-table-column prop="title" label="文档名称" min-width="200">
+          <template #default="{ row }">
+            <div class="document-name">
+              <el-icon class="file-icon" :style="{ color: getFileTypeColor(row.file_type) }">
+                <component :is="getFileTypeIcon(row.file_type)" />
+              </el-icon>
+              <div class="name-info">
+                <div class="title">{{ row.title }}</div>
+                <div class="file-info">{{ formatFileSize(row.file_size) }} • {{ row.file_type }}</div>
             </div>
           </div>
         </template>
-
-        <!-- 知识库列 -->
-        <template v-slot:item.knowledgeBase="{ item }">
-          <v-chip
-            :color="item.knowledgeBase.color"
+        </el-table-column>
+        
+        <el-table-column prop="knowledge_base" label="知识库" width="150">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.knowledge_base"
+              :color="row.knowledge_base.color || '#409eff'"
+              effect="light"
             size="small"
-            variant="tonal"
           >
-            {{ item.knowledgeBase.name }}
-          </v-chip>
+              {{ row.knowledge_base.name }}
+            </el-tag>
         </template>
-
-        <!-- 状态列 -->
-        <template v-slot:item.status="{ item }">
-          <div class="d-flex align-center">
-            <v-chip
-              :color="getStatusColor(item.status)"
-              size="small"
-              variant="tonal"
-              class="mr-2"
-            >
-              <v-icon size="small" start>
-                {{ getStatusIcon(item.status) }}
-              </v-icon>
-              {{ item.status }}
-            </v-chip>
-            <v-progress-circular
-              v-if="item.status === '处理中'"
-              :model-value="item.progress"
-              size="20"
-              width="2"
-              :color="getStatusColor(item.status)"
-            />
-          </div>
+        </el-table-column>
+        
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getStatusText(row.status) }}
+            </el-tag>
         </template>
-
-        <!-- 上传者列 -->
-        <template v-slot:item.uploader="{ item }">
-          <div class="d-flex align-center">
-            <v-avatar size="24" class="mr-2">
-              <v-img :src="item.uploader.avatar" :alt="item.uploader.name">
-                <template v-slot:placeholder>
-                  <v-icon size="12">mdi-account</v-icon>
+        </el-table-column>
+        
+        <el-table-column label="文档块数" width="100" align="center">
+          <template #default="{ row }">
+            <el-badge :value="row.chunk_count || 0" :max="99" />
                 </template>
-              </v-img>
-            </v-avatar>
-            {{ item.uploader.name }}
+        </el-table-column>
+        
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.created_at) }}
+        </template>
+        </el-table-column>
+        
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="editDocument(row)">
+              编辑
+            </el-button>
+            <el-button type="primary" link size="small" @click="previewDocument(row)">
+              预览
+            </el-button>
+            <el-button type="danger" link size="small" @click="deleteDocument(row)">
+              删除
+            </el-button>
+        </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          background
+          layout="prev, pager, next"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+
+      <!-- 批量操作 -->
+      <div v-if="selectedDocuments.length > 0" class="batch-actions">
+        <el-alert
+          :title="`已选择 ${selectedDocuments.length} 个文档`"
+          type="info"
+          show-icon
+          :closable="false"
+        >
+          <template #default>
+            <div style="margin-top: 10px">
+              <el-button type="danger" size="small" @click="batchDeleteDocuments">
+                批量删除
+              </el-button>
           </div>
         </template>
-
-        <!-- 上传时间列 -->
-        <template v-slot:item.uploadedAt="{ item }">
-          {{ formatDate(item.uploadedAt) }}
-        </template>
-
-        <!-- 操作列 -->
-        <template v-slot:item.actions="{ item }">
-          <div class="d-flex align-center">
-            <v-btn
-              icon="mdi-eye"
-              variant="text"
-              size="small"
-              @click="previewDocument(item)"
-              :disabled="!canPreview(item)"
-            />
-            <v-btn
-              icon="mdi-download"
-              variant="text"
-              size="small"
-              @click="downloadDocument(item)"
-            />
-            <v-menu>
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  icon="mdi-dots-vertical"
-                  variant="text"
-                  size="small"
-                />
-              </template>
-              <v-list density="compact">
-                <v-list-item @click="editDocument(item)">
-                  <template v-slot:prepend>
-                    <v-icon>mdi-pencil</v-icon>
-                  </template>
-                  <v-list-item-title>编辑信息</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="reprocessDocument(item)">
-                  <template v-slot:prepend>
-                    <v-icon>mdi-refresh</v-icon>
-                  </template>
-                  <v-list-item-title>重新处理</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="moveDocument(item)">
-                  <template v-slot:prepend>
-                    <v-icon>mdi-folder-move</v-icon>
-                  </template>
-                  <v-list-item-title>移动到...</v-list-item-title>
-                </v-list-item>
-                <v-divider />
-                <v-list-item @click="deleteDocument(item)" class="text-error">
-                  <template v-slot:prepend>
-                    <v-icon color="error">mdi-delete</v-icon>
-                  </template>
-                  <v-list-item-title>删除</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </div>
-        </template>
-      </v-data-table>
-    </v-card>
+        </el-alert>
+      </div>
+    </el-card>
 
     <!-- 上传文档对话框 -->
-    <v-dialog v-model="showUploadDialog" max-width="600" persistent>
-      <v-card>
-        <v-card-title class="text-h5 d-flex align-center">
-          <v-icon class="mr-2">mdi-upload</v-icon>
-          上传文档
-        </v-card-title>
-        
-        <v-card-text>
-          <v-form ref="uploadFormRef" v-model="uploadFormValid">
-            <!-- 知识库选择 -->
-            <v-select
-              v-model="uploadForm.knowledgeBaseId"
-              :items="knowledgeBaseOptions"
-              item-title="text"
-              item-value="value"
-              label="选择知识库"
-              :rules="requiredRules"
-              variant="outlined"
-              class="mb-4"
+    <el-dialog
+      v-model="dialogVisible"
+      title="上传文档"
+      width="900px"
+      @close="resetUploadForm"
+    >
+      <el-form
+        ref="uploadFormRef"
+        :model="uploadForm"
+        :rules="uploadFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="知识库" prop="knowledgeBaseId">
+          <el-select v-model="uploadForm.knowledgeBaseId" placeholder="请选择知识库" style="width: 100%">
+            <el-option
+              v-for="kb in knowledgeBaseOptions"
+              :key="kb.value"
+              :label="kb.label"
+              :value="kb.value"
             />
-
-            <!-- 文件上传区域 -->
-            <div class="upload-area mb-4" @drop="handleDrop" @dragover.prevent @dragenter.prevent>
-              <v-file-input
-                v-model="uploadForm.files"
-                accept=".pdf,.doc,.docx,.txt,.md,.ppt,.pptx,.xls,.xlsx"
-                label="选择文件"
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="文件选择">
+          <div class="upload-container">
+            <el-upload
+              ref="uploadRef"
+              :file-list="[]"
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :show-file-list="false"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.md,.ppt,.pptx,.xls,.xlsx"
+            >
+              <el-button type="primary" :icon="Upload" size="small">选择文件</el-button>
+            </el-upload>
+            
+            <!-- 文件夹上传按钮 -->
+            <div style="margin-top: 10px; text-align: center;">
+              <input
+                ref="folderInputRef"
+                type="file"
+                webkitdirectory
                 multiple
-                variant="outlined"
-                prepend-icon="mdi-paperclip"
-                show-size
-                @change="handleFileChange"
+                style="display: none"
+                @change="handleFolderChange"
+                accept=".pdf,.doc,.docx,.txt,.md,.ppt,.pptx,.xls,.xlsx"
               />
-              
-              <div class="text-center mt-4">
-                <v-icon size="64" color="primary" class="mb-2">
-                  mdi-cloud-upload-outline
-                </v-icon>
-                <p class="text-body-1">
-                  拖拽文件到此处或点击选择文件
-                </p>
-                <p class="text-caption text-medium-emphasis">
-                  支持 PDF, DOC, DOCX, TXT, MD, PPT, PPTX, XLS, XLSX 格式
-                </p>
-              </div>
-            </div>
-
-            <!-- 处理选项 -->
-            <v-expansion-panels variant="accordion" class="mb-4">
-              <v-expansion-panel title="处理选项">
-                <v-expansion-panel-text>
-                  <v-checkbox
-                    v-model="uploadForm.enableOCR"
-                    label="启用OCR文字识别"
-                    hide-details
-                    class="mb-2"
-                  />
-                  <v-checkbox
-                    v-model="uploadForm.autoChunk"
-                    label="自动分块处理"
-                    hide-details
-                    class="mb-2"
-                  />
-                  <v-checkbox
-                    v-model="uploadForm.extractKeywords"
-                    label="提取关键词"
-                    hide-details
-                  />
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-
-            <!-- 上传进度 -->
-            <div v-if="uploading" class="mb-4">
-              <div class="d-flex align-center justify-space-between mb-2">
-                <span class="text-body-2">上传进度</span>
-                <span class="text-body-2">{{ uploadProgress }}%</span>
-              </div>
-              <v-progress-linear
-                :model-value="uploadProgress"
-                color="primary"
-                height="8"
-                rounded
-              />
-            </div>
-          </v-form>
-        </v-card-text>
-        
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="cancelUpload">取消</v-btn>
-          <v-btn
-            color="primary"
-            @click="startUpload"
-            :disabled="!uploadFormValid || uploading"
-            :loading="uploading"
-          >
-            开始上传
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- 文档预览对话框 -->
-    <v-dialog v-model="showPreviewDialog" max-width="900" height="600">
-      <v-card class="fill-height">
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-eye</v-icon>
-          文档预览: {{ selectedDocument?.name }}
-          <v-spacer />
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="showPreviewDialog = false"
-          />
-        </v-card-title>
-        
-        <v-card-text class="pa-0 fill-height">
-          <div class="preview-container fill-height d-flex align-center justify-center">
-            <div class="text-center">
-              <v-icon size="64" color="primary" class="mb-4">
-                mdi-file-document-outline
-              </v-icon>
-              <p class="text-h6 mb-2">文档预览功能开发中</p>
-              <p class="text-body-2 text-medium-emphasis">
-                将支持PDF、Word、图片等格式的在线预览
-              </p>
+              <el-button @click="selectFolder" :icon="FolderAdd" size="small">
+                选择文件夹
+              </el-button>
             </div>
           </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+        </el-form-item>
+        
+        <!-- 文件列表 -->
+        <el-form-item label="已选文件" v-if="uploadFileList.length > 0">
+          <div class="file-list-container">
+            <div class="file-list-summary">
+              <span>共 {{ uploadFileList.length }} 个文件，已完成 {{ successCount }} 个，失败 {{ errorCount }} 个</span>
+              <div style="margin-left: auto;">
+                <el-button @click="startAllUploads" :disabled="!hasWaitingFiles || uploading" size="small" type="primary">
+                  开始上传所有文件
+                </el-button>
+                <el-button @click="clearAllFiles" size="small">清空列表</el-button>
+              </div>
+            </div>
+            
+            <el-table
+              :data="paginatedFileList"
+              max-height="300px"
+              style="width: 100%"
+              size="small"
+            >
+              <el-table-column prop="name" label="文件名" min-width="200">
+                <template #default="{ row }">
+                  <div class="file-name-cell">
+                    <el-icon class="file-icon" :style="{ color: getFileTypeColor(getFileExtension(row.name)) }">
+                      <component :is="getFileTypeIcon(getFileExtension(row.name))" />
+                    </el-icon>
+                    <span class="file-name">{{ row.name }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              
+              <el-table-column prop="size" label="大小" width="100">
+                <template #default="{ row }">
+                  {{ formatFileSize(row.size) }}
+                </template>
+              </el-table-column>
+              
+              <el-table-column label="状态" width="120">
+                <template #default="{ row }">
+                  <el-tag v-if="row.status === 'pending'" type="info" size="small">待上传</el-tag>
+                  <el-tag v-else-if="row.status === 'uploading'" type="warning" size="small">上传中</el-tag>
+                  <el-tag v-else-if="row.status === 'success'" type="success" size="small">已完成</el-tag>
+                  <el-tag v-else-if="row.status === 'error'" type="danger" size="small">上传失败</el-tag>
+                </template>
+              </el-table-column>
+              
+              <el-table-column label="进度" width="150">
+                <template #default="{ row }">
+                  <el-progress
+                    v-if="row.status === 'uploading' || row.status === 'success'"
+                    :percentage="row.progress"
+                    :status="row.status === 'success' ? 'success' : undefined"
+                    size="small"
+                  />
+                </template>
+              </el-table-column>
+              
+              <el-table-column label="操作" width="80">
+                <template #default="{ row, $index }">
+                  <el-button
+                    type="danger"
+                    link
+                    size="small"
+                    @click="removeFile(getActualIndex($index))"
+                    :disabled="row.status === 'uploading'"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            
+            <!-- 文件列表分页 -->
+            <div class="file-list-pagination" v-if="uploadFileList.length > fileListPageSize">
+              <el-pagination
+                v-model:current-page="fileListCurrentPage"
+                :page-size="fileListPageSize"
+                :total="uploadFileList.length"
+                layout="prev, pager, next"
+                size="small"
+                background
+              />
+            </div>
+          </div>
+        </el-form-item>
+        
+        <el-form-item label="描述">
+          <el-input
+            v-model="uploadForm.description"
+            type="textarea"
+            rows="3"
+            placeholder="请输入文档描述（可选）"
+          />
+        </el-form-item>
+        
+        <el-form-item label="标签">
+          <el-input
+            v-model="uploadForm.tags"
+            placeholder="请输入标签，多个标签用逗号分隔（可选）"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="submitBatchUpload" 
+            :loading="submitting"
+            :disabled="!canSubmit"
+          >
+            提交文档
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
 
-    <!-- 删除确认对话框 -->
-    <v-dialog v-model="showDeleteDialog" max-width="400">
-      <v-card>
-        <v-card-title class="text-h6">确认删除</v-card-title>
-        <v-card-text>
-          确定要删除文档 "{{ selectedDocument?.name }}" 吗？此操作不可撤销。
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="showDeleteDialog = false">取消</v-btn>
-          <v-btn color="error" @click="confirmDelete">删除</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <!-- 批量导入对话框 -->
+    <el-dialog
+      v-model="batchImportDialogVisible"
+      title="批量导入文档"
+      width="600px"
+      @close="resetImportForm"
+    >
+      <el-form
+        ref="importFormRef"
+        :model="importForm"
+        :rules="importFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="知识库" prop="knowledgeBaseId">
+          <el-select v-model="importForm.knowledgeBaseId" placeholder="请选择知识库" style="width: 100%">
+            <el-option
+              v-for="kb in knowledgeBaseOptions"
+              :key="kb.value"
+              :label="kb.label"
+              :value="kb.value"
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="导入目录" prop="directoryPath">
+          <el-input
+            v-model="importForm.directoryPath"
+            placeholder="请输入要导入的目录路径，例如: ./files"
+          />
+          <el-alert
+            title="目录路径说明"
+            description="请输入相对于项目根目录的路径，例如 ./files 表示项目根目录下的 files 文件夹"
+            type="info"
+            show-icon
+            :closable="false"
+            style="margin-top: 10px"
+          />
+        </el-form-item>
+        
+        <el-form-item label="递归导入">
+          <el-switch v-model="importForm.recursive" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px">
+            开启后将导入子目录中的文件
+          </span>
+        </el-form-item>
+        
+        <el-form-item label="描述">
+          <el-input
+            v-model="importForm.description"
+            type="textarea"
+            rows="3"
+            placeholder="请输入文档描述（可选）"
+          />
+        </el-form-item>
+        
+        <el-form-item label="标签">
+          <el-input
+            v-model="importForm.tags"
+            placeholder="请输入标签，多个标签用逗号分隔（可选）"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="batchImportDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitImport" :loading="importing">
+            开始导入
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑文档对话框 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑文档"
+      width="500px"
+      @close="resetEditForm"
+    >
+      <el-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="editFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="文档名称" prop="title">
+          <el-input v-model="editForm.title" placeholder="请输入文档名称" />
+        </el-form-item>
+        
+        <el-form-item label="描述">
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            rows="3"
+            placeholder="请输入文档描述（可选）"
+          />
+        </el-form-item>
+        
+        <el-form-item label="标签">
+          <el-input
+            v-model="editForm.tags"
+            placeholder="请输入标签，多个标签用逗号分隔（可选）"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEdit" :loading="editing">
+            保存
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import {
+  ElMessage,
+  ElMessageBox,
+  type FormInstance,
+  type FormRules,
+  type UploadUserFile
+} from 'element-plus'
+import {
+  Search,
+  Upload,
+  FolderAdd,
+  Refresh,
+  UploadFilled,
+  Document,
+  DocumentCopy,
+  Files,
+  Notebook,
+  DataBoard,
+  Grid
+} from '@element-plus/icons-vue'
+import { documentApi, type Document as DocumentType } from '@/api/document'
+import { knowledgeApi, type KnowledgeBase } from '@/api/knowledge'
+
+// 允许的文件类型
+const allowedFileTypes = [
+  '.pdf', '.doc', '.docx', '.txt', '.md', '.ppt', '.pptx', '.xls', '.xlsx'
+]
 
 // 响应式数据
 const loading = ref(false)
-const searchQuery = ref('')
-const knowledgeBaseFilter = ref('全部')
-const statusFilter = ref('全部')
-const typeFilter = ref('全部')
-const sortBy = ref('上传时间')
-const showUploadDialog = ref(false)
-const showPreviewDialog = ref(false)
-const showDeleteDialog = ref(false)
 const uploading = ref(false)
-const uploadProgress = ref(0)
-const uploadFormRef = ref()
-const uploadFormValid = ref(false)
-const selectedDocument = ref(null)
-const showAdvancedFilters = ref(false)
-const dateMenuOpen = ref(false)
-const dateRange = ref([])
-const sizeFilter = reactive({
-  min: null,
-  max: null
+const importing = ref(false)
+const editing = ref(false)
+const documentList = ref<DocumentType[]>([])
+const selectedDocuments = ref<DocumentType[]>([])
+const searchQuery = ref('')
+const knowledgeBaseFilter = ref('')
+const statusFilter = ref('')
+const typeFilter = ref('')
+const dialogVisible = ref(false)
+const batchImportDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const currentDocument = ref<DocumentType | null>(null)
+
+// 表单引用
+const uploadFormRef = ref<FormInstance>()
+const importFormRef = ref<FormInstance>()
+const editFormRef = ref<FormInstance>()
+
+// 分页数据
+const pagination = reactive({
+  page: 1,
+  pageSize: 10, // 与知识库管理保持一致，虽然不显示，但内部逻辑可以保持
+  total: 0 // 不再用于显示，但可以保留以防未来需要
 })
-const tagFilter = ref([])
-const availableTags = ['重要', '草稿', '已审核', '机密', '公开']
 
-// 统计数据
-const documentStats = [
-  {
-    title: '总文档数',
-    value: '1,234',
-    change: '+56 本月',
-    trend: 'up',
-    color: 'primary',
-    icon: 'mdi-file-document-multiple'
-  },
-  {
-    title: '处理成功',
-    value: '1,156',
-    change: '93.7%',
-    trend: 'up',
-    color: 'success',
-    icon: 'mdi-check-circle'
-  },
-  {
-    title: '处理中',
-    value: '45',
-    change: '+12 今日',
-    trend: 'up',
-    color: 'warning',
-    icon: 'mdi-clock-outline'
-  },
-  {
-    title: '处理失败',
-    value: '33',
-    change: '-5 本周',
-    trend: 'down',
-    color: 'error',
-    icon: 'mdi-alert-circle'
-  }
-]
+// 知识库选项
+const knowledgeBaseOptions = ref<Array<{ label: string; value: number }>>([])
 
-// 筛选选项
-const knowledgeBaseOptions = [
-  { text: '全部知识库', value: '全部' },
-  { text: 'AI技术文档', value: 1 },
-  { text: '产品使用手册', value: 2 },
-  { text: '内部培训资料', value: 3 },
-  { text: '法律合规文档', value: 4 }
-]
+// 筛选选项 (These are no longer needed for display but might be used in backend logic. Keeping for now)
+const statusOptions = ['processing', 'completed', 'failed', 'pending']
+const typeOptions = ['.pdf', '.doc', '.docx', '.txt', '.md', '.ppt', '.pptx', '.xls', '.xlsx']
 
-const statusOptions = ['全部', '处理成功', '处理中', '处理失败', '等待处理']
-const typeOptions = ['全部', 'PDF', 'Word', 'Excel', 'PowerPoint', 'Text', 'Markdown']
-const sortOptions = ['上传时间', '文件名', '文件大小', '处理状态']
-
-// 表格标题
-const tableHeaders = [
-  { title: '文档名称', key: 'name', sortable: true },
-  { title: '知识库', key: 'knowledgeBase', sortable: true },
-  { title: '类型', key: 'type', sortable: true },
-  { title: '状态', key: 'status', sortable: true },
-  { title: '上传者', key: 'uploader', sortable: false },
-  { title: '上传时间', key: 'uploadedAt', sortable: true },
-  { title: '操作', key: 'actions', sortable: false }
-]
-
-// 上传表单
+// 上传表单数据
 const uploadForm = reactive({
-  knowledgeBaseId: null,
-  files: [],
-  enableOCR: true,
-  autoChunk: true,
-  extractKeywords: true
+  knowledgeBaseId: null as number | null,
+  files: [] as UploadUserFile[],
+  description: '',
+  tags: ''
 })
 
-// 验证规则
-const requiredRules = [
-  (v: any) => !!v || '此字段为必填项'
-]
+// 文件上传列表管理
+const uploadFileList = ref<Array<{
+  id?: string
+  name: string
+  size: number
+  status: 'pending' | 'uploading' | 'success' | 'error'
+  progress: number
+  file: File
+  fileId?: string
+  error?: string
+}>>([])
 
-// 模拟文档数据
-const documents = ref([
-  {
-    id: 1,
-    name: 'AI技术白皮书.pdf',
-    type: 'PDF',
-    size: 2048576,
-    status: '处理成功',
-    progress: 100,
-    knowledgeBase: { name: 'AI技术文档', color: 'primary' },
-    uploader: { name: 'Alice', avatar: '' },
-    uploadedAt: new Date('2024-01-20T10:30:00'),
-    chunks: 45,
-    tags: ['重要', '已审核'],
-    metadata: {
-      keywords: ['人工智能', '机器学习', '深度学习', '神经网络'],
-      pageCount: 32,
-      author: 'AI研究团队'
-    }
-  },
-  {
-    id: 2,
-    name: '产品需求文档.docx',
-    type: 'Word',
-    size: 1536000,
-    status: '处理中',
-    progress: 75,
-    knowledgeBase: { name: '产品使用手册', color: 'success' },
-    uploader: { name: 'Bob', avatar: '' },
-    uploadedAt: new Date('2024-01-20T14:15:00'),
-    chunks: 0,
-    tags: ['草稿'],
-    metadata: {
-      keywords: ['产品', '需求', '功能', '规格'],
-      pageCount: 18,
-      author: '产品团队'
-    }
-  },
-  {
-    id: 3,
-    name: '数据分析报告.xlsx',
-    type: 'Excel',
-    size: 3072000,
-    status: '处理失败',
-    progress: 0,
-    knowledgeBase: { name: '内部培训资料', color: 'warning' },
-    uploader: { name: 'Charlie', avatar: '' },
-    uploadedAt: new Date('2024-01-20T09:45:00'),
-    chunks: 0,
-    tags: ['机密'],
-    metadata: {
-      keywords: ['数据', '分析', '报表', '统计'],
-      error: '文件格式不支持'
-    }
-  },
-  {
-    id: 4,
-    name: '法律条款说明.pdf',
-    type: 'PDF',
-    size: 1024000,
-    status: '等待处理',
-    progress: 0,
-    knowledgeBase: { name: '法律合规文档', color: 'info' },
-    uploader: { name: 'Diana', avatar: '' },
-    uploadedAt: new Date('2024-01-20T16:20:00'),
-    chunks: 0,
-    tags: ['公开', '重要'],
-    metadata: {
-      keywords: ['法律', '条款', '合规', '规定']
-    }
-  },
-  {
-    id: 5,
-    name: '用户操作手册.pdf',
-    type: 'PDF',
-    size: 1845000,
-    status: '处理成功',
-    progress: 100,
-    knowledgeBase: { name: '产品使用手册', color: 'success' },
-    uploader: { name: 'Eva', avatar: '' },
-    uploadedAt: new Date('2024-01-19T11:20:00'),
-    chunks: 28,
-    tags: ['公开', '已审核'],
-    metadata: {
-      keywords: ['用户', '操作', '指南', '教程'],
-      pageCount: 24,
-      author: '技术文档团队'
-    }
-  },
-  {
-    id: 6,
-    name: '研发计划书.docx',
-    type: 'Word',
-    size: 1245000,
-    status: '处理成功',
-    progress: 100,
-    knowledgeBase: { name: 'AI技术文档', color: 'primary' },
-    uploader: { name: 'Frank', avatar: '' },
-    uploadedAt: new Date('2024-01-18T09:30:00'),
-    chunks: 20,
-    tags: ['机密', '重要'],
-    metadata: {
-      keywords: ['研发', '计划', '项目', '时间线'],
-      pageCount: 15,
-      author: '研发团队'
-    }
-  }
-])
+// 文件列表分页
+const fileListCurrentPage = ref(1)
+const fileListPageSize = ref(10)
 
-// 过滤后的文档
-const filteredDocuments = computed(() => {
-  let filtered = documents.value
+// 表单引用
+const folderInputRef = ref<HTMLInputElement>()
+const submitting = ref(false)
 
-  // 知识库筛选
-  if (knowledgeBaseFilter.value !== '全部') {
-    filtered = filtered.filter(doc => doc.knowledgeBase.name === knowledgeBaseFilter.value)
-  }
+// 导入表单数据
+const importForm = reactive({
+  knowledgeBaseId: null as number | null,
+  directoryPath: './files',
+  recursive: false,
+  description: '',
+  tags: ''
+})
 
-  // 状态筛选
-  if (statusFilter.value !== '全部') {
-    filtered = filtered.filter(doc => doc.status === statusFilter.value)
-  }
+// 编辑表单数据
+const editForm = reactive({
+  title: '',
+  description: '',
+  tags: ''
+})
 
-  // 类型筛选
-  if (typeFilter.value !== '全部') {
-    filtered = filtered.filter(doc => doc.type === typeFilter.value)
-  }
-  
-  // 搜索查询
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(doc => 
-      doc.name.toLowerCase().includes(query) || 
-      (doc.metadata?.keywords?.some(kw => kw.toLowerCase().includes(query)))
-    )
-  }
-  
-  // 高级筛选 - 日期范围
-  if (dateRange.value && dateRange.value.length === 2) {
-    const startDate = new Date(dateRange.value[0])
-    const endDate = new Date(dateRange.value[1])
-    endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+// 表单验证规则
+const uploadFormRules: FormRules = {
+  knowledgeBaseId: [
+    { required: true, message: '请选择知识库', trigger: 'change' }
+  ],
+  files: [
+    { required: true, message: '请选择要上传的文件', trigger: 'change' }
+  ]
+}
+
+const importFormRules: FormRules = {
+  knowledgeBaseId: [
+    { required: true, message: '请选择知识库', trigger: 'change' }
+  ],
+  directoryPath: [
+    { required: true, message: '请输入导入目录路径', trigger: 'blur' }
+  ]
+}
+
+const editFormRules: FormRules = {
+  title: [
+    { required: true, message: '请输入文档名称', trigger: 'blur' }
+  ]
+}
+
+// 计算属性
+const paginatedFileList = computed(() => {
+  const start = (fileListCurrentPage.value - 1) * fileListPageSize.value
+  const end = start + fileListPageSize.value
+  return uploadFileList.value.slice(start, end)
+})
+
+const successCount = computed(() => 
+  uploadFileList.value.filter(file => file.status === 'success').length
+)
+
+const errorCount = computed(() => 
+  uploadFileList.value.filter(file => file.status === 'error').length
+)
+
+const hasWaitingFiles = computed(() => 
+  uploadFileList.value.some(file => file.status === 'pending')
+)
+
+const canSubmit = computed(() => 
+  uploadFileList.value.length > 0 && 
+  uploadFileList.value.every(file => file.status === 'success' || file.status === 'error') &&
+  uploadFileList.value.some(file => file.status === 'success') &&
+  uploadForm.knowledgeBaseId
+)
+
+// 方法
+const fetchDocuments = async () => {
+  try {
+    loading.value = true
+    const params = {
+      page: pagination.page,
+      // page_size: pagination.pageSize, // 移除，因为不再提供每页大小选择
+      search: searchQuery.value || undefined,
+      kb_id: knowledgeBaseFilter.value || undefined,
+      // Removed status and file_type from params as per UI change
+      // status: statusFilter.value || undefined,
+      // file_type: typeFilter.value || undefined
+    }
     
-    filtered = filtered.filter(doc => {
-      const docDate = new Date(doc.uploadedAt)
-      return docDate >= startDate && docDate <= endDate
+    const response = await documentApi.getDocuments(params)
+    // 确保 response 是一个数组，即使后端返回 null 或其他非数组类型
+    documentList.value = Array.isArray(response) ? response : []
+    // pagination.total = documentList.value.length // 暂时注释，等待后端返回total
+    
+    // 获取知识库信息
+    await enrichDocumentsWithKnowledgeBase()
+    
+  } catch (error: any) {
+    console.error('获取文档列表失败:', error)
+    ElMessage.error('获取文档列表失败：' + (error.message || '未知错误'))
+  } finally {
+    loading.value = false
+  }
+}
+
+const enrichDocumentsWithKnowledgeBase = async () => {
+  // 为文档添加知识库信息
+  for (const doc of documentList.value) {
+    if (!doc.knowledge_base && doc.knowledge_base_id) {
+      try {
+        const kb = await knowledgeApi.getKnowledgeBase(doc.knowledge_base_id)
+        doc.knowledge_base = {
+          id: kb.id,
+          name: kb.name,
+          color: kb.color
+        }
+      } catch (error) {
+        // 忽略错误，继续处理其他文档
+      }
+    }
+  }
+}
+
+const fetchKnowledgeBases = async () => {
+  try {
+    const response = await knowledgeApi.getKnowledgeBases()
+    const dataArray = Array.isArray(response) ? response : response.items || []
+    
+    knowledgeBaseOptions.value = dataArray.map(kb => ({
+      label: kb.name,
+      value: kb.id
+    }))
+  } catch (error: any) {
+    console.error('获取知识库列表失败:', error)
+    ElMessage.error('获取知识库列表失败：' + (error.message || '未知错误'))
+  }
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  fetchDocuments()
+}
+
+// 移除 handleSizeChange 方法，因为不再支持页面大小调整
+// const handleSizeChange = (val: number) => {
+//   pagination.pageSize = val
+//   pagination.page = 1
+//   fetchDocuments()
+// }
+
+const handleCurrentChange = (val: number) => {
+  pagination.page = val
+  fetchDocuments()
+}
+
+const handleSelectionChange = (selection: DocumentType[]) => {
+  selectedDocuments.value = selection
+}
+
+const refreshDocuments = () => {
+  fetchDocuments()
+}
+
+const showUploadDialog = () => {
+  dialogVisible.value = true
+}
+
+const showBatchImportDialog = () => {
+  batchImportDialogVisible.value = true
+}
+
+// 新的文件处理方法
+const handleFileChange = (file: UploadUserFile) => {
+  if (file.raw) {
+    // 检查文件类型
+    const fileExtension = getFileExtension(file.raw.name)
+    if (!allowedFileTypes.includes(fileExtension)) {
+      ElMessage.warning(`文件 ${file.raw.name} 的格式不被支持。支持的格式有：${allowedFileTypes.join(', ')}`)
+      return
+    }
+    addFilesToList([file.raw])
+  }
+}
+
+const handleFolderChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    const files = Array.from(target.files)
+    const validFiles = files.filter(file => {
+      const fileExtension = getFileExtension(file.name)
+      if (!allowedFileTypes.includes(fileExtension)) {
+        ElMessage.warning(`文件 ${file.name} 的格式不被支持。支持的格式有：${allowedFileTypes.join(', ')}`)
+        return false
+      }
+      return true
     })
+    addFilesToList(validFiles)
   }
+  // 清空input以允许重新选择同一文件夹
+  target.value = ''
+}
+
+const selectFolder = () => {
+  folderInputRef.value?.click()
+}
+
+const addFilesToList = (files: File[]) => {
+  files.forEach(file => {
+    // 检查文件是否已存在
+    const exists = uploadFileList.value.some(f => f.name === file.name && f.size === file.size)
+    if (!exists) {
+      uploadFileList.value.push({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size,
+        status: 'pending',
+        progress: 0,
+        file: file
+      })
+    }
+  })
   
-  // 高级筛选 - 文件大小
-  if (sizeFilter.min !== null && sizeFilter.min !== '') {
-    const minBytes = Number(sizeFilter.min) * 1024 // KB转字节
-    filtered = filtered.filter(doc => doc.size >= minBytes)
-  }
-  
-  if (sizeFilter.max !== null && sizeFilter.max !== '') {
-    const maxBytes = Number(sizeFilter.max) * 1024 // KB转字节
-    filtered = filtered.filter(doc => doc.size <= maxBytes)
-  }
-  
-  // 高级筛选 - 标签
-  if (tagFilter.value && tagFilter.value.length > 0) {
-    filtered = filtered.filter(doc => {
-      // 假设文档有tags属性
-      const docTags = doc.tags || []
-      return tagFilter.value.some(tag => docTags.includes(tag))
+  // 自动开始上传
+  setTimeout(() => {
+    startAllUploads()
+  }, 100)
+}
+
+const removeFile = (index: number) => {
+  uploadFileList.value.splice(index, 1)
+}
+
+const getActualIndex = (pageIndex: number) => {
+  return (fileListCurrentPage.value - 1) * fileListPageSize.value + pageIndex
+}
+
+const clearAllFiles = () => {
+  uploadFileList.value = []
+  fileListCurrentPage.value = 1
+}
+
+const getFileExtension = (filename: string) => {
+  return '.' + filename.split('.').pop()?.toLowerCase()
+}
+
+// 单个文件上传
+const uploadSingleFile = async (fileItem: any) => {
+  try {
+    fileItem.status = 'uploading'
+    fileItem.progress = 0
+    
+    // 创建FormData
+    const formData = new FormData()
+    formData.append('file', fileItem.file)
+    
+    // 使用XMLHttpRequest来支持进度监听
+    const xhr = new XMLHttpRequest()
+    
+    return new Promise((resolve, reject) => {
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          fileItem.progress = Math.round((e.loaded / e.total) * 100)
+        }
+      })
+      
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            fileItem.status = 'success'
+            fileItem.progress = 100
+            fileItem.fileId = response.id || response.file_id
+            resolve(response)
+          } catch (e) {
+            fileItem.status = 'error'
+            fileItem.error = '响应解析失败'
+            reject(e)
+          }
+        } else {
+          fileItem.status = 'error'
+          fileItem.error = `上传失败: ${xhr.status}`
+          reject(new Error(`Upload failed: ${xhr.status}`))
+        }
+      })
+      
+      xhr.addEventListener('error', () => {
+        fileItem.status = 'error'
+        fileItem.error = '网络错误'
+        reject(new Error('Network error'))
+      })
+      
+      xhr.open('POST', '/api/files/upload', true)
+      
+      // 添加认证头等
+      const token = localStorage.getItem('token')
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      }
+      
+      xhr.send(formData)
     })
+  } catch (error) {
+    fileItem.status = 'error'
+    fileItem.error = error instanceof Error ? error.message : '上传失败'
+    throw error
   }
-
-  return filtered
-})
-
-// 获取文件类型图标
-function getFileTypeIcon(type: string) {
-  const icons = {
-    'PDF': 'mdi-file-pdf-box',
-    'Word': 'mdi-file-word-box',
-    'Excel': 'mdi-file-excel-box',
-    'PowerPoint': 'mdi-file-powerpoint-box',
-    'Text': 'mdi-file-document-outline',
-    'Markdown': 'mdi-language-markdown-outline'
-  }
-  return icons[type] || 'mdi-file-outline'
 }
 
-// 获取文件类型颜色
-function getFileTypeColor(type: string) {
-  const colors = {
-    'PDF': 'error',
-    'Word': 'primary',
-    'Excel': 'success',
-    'PowerPoint': 'warning',
-    'Text': 'info',
-    'Markdown': 'secondary'
-  }
-  return colors[type] || 'default'
-}
-
-// 获取状态颜色
-function getStatusColor(status: string) {
-  const colors = {
-    '处理成功': 'success',
-    '处理中': 'warning',
-    '处理失败': 'error',
-    '等待处理': 'info'
-  }
-  return colors[status] || 'default'
-}
-
-// 获取状态图标
-function getStatusIcon(status: string) {
-  const icons = {
-    '处理成功': 'mdi-check-circle',
-    '处理中': 'mdi-clock-outline',
-    '处理失败': 'mdi-alert-circle',
-    '等待处理': 'mdi-timer-sand'
-  }
-  return icons[status] || 'mdi-help-circle'
-}
-
-// 格式化文件大小
-function formatFileSize(bytes: number) {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = bytes
-  let unitIndex = 0
+// 开始上传所有待上传文件
+const startAllUploads = async () => {
+  if (uploading.value) return
   
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
+  const pendingFiles = uploadFileList.value.filter(file => file.status === 'pending')
+  if (pendingFiles.length === 0) return
   
-  return `${size.toFixed(1)} ${units[unitIndex]}`
+  uploading.value = true
+  
+  try {
+    // 并发上传，但限制并发数
+    const concurrency = 3
+    for (let i = 0; i < pendingFiles.length; i += concurrency) {
+      const batch = pendingFiles.slice(i, i + concurrency)
+      await Promise.allSettled(batch.map(file => uploadSingleFile(file)))
+    }
+  } catch (error) {
+    console.error('批量上传过程中出错:', error)
+  } finally {
+    uploading.value = false
+  }
 }
 
-// 格式化日期
-function formatDate(date: Date) {
+const submitUpload = async () => {
+  if (!uploadFormRef.value) return
+  
+  const valid = await uploadFormRef.value.validate()
+  if (!valid) return
+  
+  try {
+    uploading.value = true
+    
+    if (uploadForm.files.length === 1) {
+      // 单文件上传
+      await documentApi.createDocument({
+        kb_id: uploadForm.knowledgeBaseId!,
+        title: uploadForm.files[0].name,
+        description: uploadForm.description || undefined,
+        tags: uploadForm.tags || undefined,
+        file: uploadForm.files[0].raw!
+      })
+    } else {
+      // 多文件上传
+      await documentApi.batchUploadDocuments({
+        kb_id: uploadForm.knowledgeBaseId!,
+        description: uploadForm.description || undefined,
+        tags: uploadForm.tags || undefined,
+        files: uploadForm.files.map(f => f.raw!).filter(Boolean)
+      })
+    }
+    
+    ElMessage.success('文档上传成功')
+    dialogVisible.value = false
+    refreshDocuments()
+  } catch (error: any) {
+    console.error('文档上传失败:', error)
+    ElMessage.error('文档上传失败：' + (error.message || '未知错误'))
+  } finally {
+    uploading.value = false
+  }
+}
+
+const submitImport = async () => {
+  if (!importFormRef.value) return
+  
+  const valid = await importFormRef.value.validate()
+  if (!valid) return
+  
+  try {
+    importing.value = true
+    
+    const result = await documentApi.importFromDirectory({
+      kb_id: importForm.knowledgeBaseId!,
+      directory_path: importForm.directoryPath,
+      recursive: importForm.recursive,
+      description: importForm.description || undefined,
+      tags: importForm.tags || undefined
+    })
+    
+    ElMessage.success(result.message)
+    batchImportDialogVisible.value = false
+    refreshDocuments()
+  } catch (error: any) {
+    console.error('批量导入失败:', error)
+    ElMessage.error('批量导入失败：' + (error.message || '未知错误'))
+  } finally {
+    importing.value = false
+  }
+}
+
+const editDocument = (document: DocumentType) => {
+  currentDocument.value = document
+  editForm.title = document.title
+  editForm.description = document.doc_metadata?.description || ''
+  editForm.tags = document.doc_metadata?.tags?.join(', ') || ''
+  editDialogVisible.value = true
+}
+
+const submitEdit = async () => {
+  if (!editFormRef.value || !currentDocument.value) return
+  
+  const valid = await editFormRef.value.validate()
+  if (!valid) return
+  
+  try {
+    editing.value = true
+    
+    await documentApi.updateDocument(currentDocument.value.id, {
+      title: editForm.title,
+      description: editForm.description || undefined,
+      tags: editForm.tags || undefined
+    })
+    
+    ElMessage.success('文档更新成功')
+    editDialogVisible.value = false
+    refreshDocuments()
+  } catch (error: any) {
+    console.error('文档更新失败:', error)
+    ElMessage.error('文档更新失败：' + (error.message || '未知错误'))
+  } finally {
+    editing.value = false
+  }
+}
+
+const deleteDocument = async (document: DocumentType) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除文档 "${document.title}" 吗？此操作不可撤销。`,
+      '确认删除',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    await documentApi.deleteDocument(document.id)
+    ElMessage.success('文档删除成功')
+  refreshDocuments()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('文档删除失败:', error)
+      ElMessage.error('文档删除失败：' + (error.message || '未知错误'))
+    }
+  }
+}
+
+const batchDeleteDocuments = async () => {
+  if (selectedDocuments.value.length === 0) return
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedDocuments.value.length} 个文档吗？此操作不可撤销。`,
+      '确认批量删除',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    const ids = selectedDocuments.value.map(doc => doc.id)
+    const result = await documentApi.batchDeleteDocuments(ids)
+    
+    ElMessage.success(result.message)
+    selectedDocuments.value = []
+    refreshDocuments()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败：' + (error.message || '未知错误'))
+    }
+  }
+}
+
+const previewDocument = (document: DocumentType) => {
+  ElMessage.info('文档预览功能开发中')
+}
+
+const resetUploadForm = () => {
+  uploadForm.knowledgeBaseId = null
+  uploadForm.files = []
+  uploadForm.description = ''
+  uploadForm.tags = ''
+  uploadFormRef.value?.resetFields()
+}
+
+const resetImportForm = () => {
+  importForm.knowledgeBaseId = null
+  importForm.directoryPath = './files'
+  importForm.recursive = false
+  importForm.description = ''
+  importForm.tags = ''
+  importFormRef.value?.resetFields()
+}
+
+const resetEditForm = () => {
+  editForm.title = ''
+  editForm.description = ''
+  editForm.tags = ''
+  currentDocument.value = null
+  editFormRef.value?.resetFields()
+}
+
+// 工具函数
+const getFileTypeIcon = (fileType: string | null | undefined) => {
+  if (!fileType) return Document // 添加空值检查
+  const iconMap: Record<string, any> = {
+    '.pdf': Document,
+    '.doc': DocumentCopy,
+    '.docx': DocumentCopy,
+    '.txt': Files,
+    '.md': Notebook,
+    '.ppt': DataBoard,
+    '.pptx': DataBoard,
+    '.xls': Grid,
+    '.xlsx': Grid
+  }
+  return iconMap[fileType] || Document
+}
+
+const getFileTypeColor = (fileType: string) => {
+  const colorMap: Record<string, string> = {
+    '.pdf': '#f56565',
+    '.doc': '#4299e1',
+    '.docx': '#4299e1',
+    '.txt': '#48bb78',
+    '.md': '#ed8936',
+    '.ppt': '#9f7aea',
+    '.pptx': '#9f7aea',
+    '.xls': '#38b2ac',
+    '.xlsx': '#38b2ac'
+  }
+  return colorMap[fileType] || '#718096'
+}
+
+const getStatusType = (status: string | null | undefined) => {
+  if (!status) return 'info' // 添加空值检查，默认为 info 类型
+  const typeMap: Record<string, string> = {
+    'completed': 'success',
+    'processing': 'warning',
+    'failed': 'danger',
+    'pending': 'info'
+  }
+  return typeMap[status] || 'info'
+}
+
+const getStatusText = (status: string) => {
+  const textMap: Record<string, string> = {
+    'completed': '已完成',
+    'processing': '处理中',
+    'failed': '失败',
+    'pending': '待处理'
+  }
+  return textMap[status] || status
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
   })
 }
 
-// 检查是否可预览
-function canPreview(document: any) {
-  return ['PDF', 'Text', 'Markdown'].includes(document.type) && document.status === '处理成功'
-}
-
-// 计算日期范围文本
-const dateRangeText = computed(() => {
-  if (!dateRange.value || dateRange.value.length !== 2) return ''
-  return `${dateRange.value[0]} ~ ${dateRange.value[1]}`
+// 生命周期
+onMounted(() => {
+  fetchKnowledgeBases()
+  fetchDocuments()
 })
-
-// 刷新文档列表
-function refreshDocuments() {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 1000)
-}
-
-// 搜索文档
-function searchDocuments() {
-  loading.value = true
-  // 这里可以调用API进行搜索
-  setTimeout(() => {
-    loading.value = false
-  }, 800)
-}
-
-// 重置筛选条件
-function resetFilters() {
-  searchQuery.value = ''
-  knowledgeBaseFilter.value = '全部'
-  statusFilter.value = '全部'
-  typeFilter.value = '全部'
-  sortBy.value = '上传时间'
-  dateRange.value = []
-  sizeFilter.min = null
-  sizeFilter.max = null
-  tagFilter.value = []
-  
-  // 刷新文档列表
-  refreshDocuments()
-}
-
-// 预览文档
-function previewDocument(document: any) {
-  selectedDocument.value = document
-  showPreviewDialog.value = true
-}
-
-// 下载文档
-function downloadDocument(document: any) {
-  console.log('下载文档:', document.name)
-}
-
-// 编辑文档信息
-function editDocument(document: any) {
-  console.log('编辑文档:', document.name)
-}
-
-// 重新处理文档
-function reprocessDocument(document: any) {
-  console.log('重新处理文档:', document.name)
-}
-
-// 移动文档
-function moveDocument(document: any) {
-  console.log('移动文档:', document.name)
-}
-
-// 删除文档
-function deleteDocument(document: any) {
-  selectedDocument.value = document
-  showDeleteDialog.value = true
-}
-
-// 确认删除
-function confirmDelete() {
-  if (selectedDocument.value) {
-    const index = documents.value.findIndex(doc => doc.id === selectedDocument.value.id)
-    if (index > -1) {
-      documents.value.splice(index, 1)
-    }
-    showDeleteDialog.value = false
-    selectedDocument.value = null
-  }
-}
-
-// 处理文件拖拽
-function handleDrop(event: DragEvent) {
-  event.preventDefault()
-  const files = Array.from(event.dataTransfer?.files || [])
-  uploadForm.files = files
-}
-
-// 处理文件选择
-function handleFileChange(files: File[]) {
-  uploadForm.files = files
-}
-
-// 开始上传
-async function startUpload() {
-  if (!uploadFormValid.value) return
-
-  uploading.value = true
-  uploadProgress.value = 0
-
-  // 模拟上传进度
-  const interval = setInterval(() => {
-    uploadProgress.value += Math.random() * 10
-    if (uploadProgress.value >= 100) {
-      uploadProgress.value = 100
-      clearInterval(interval)
-      setTimeout(() => {
-        uploading.value = false
-        showUploadDialog.value = false
-        // 重置表单
-        Object.assign(uploadForm, {
-          knowledgeBaseId: null,
-          files: [],
-          enableOCR: true,
-          autoChunk: true,
-          extractKeywords: true
-        })
-        uploadProgress.value = 0
-      }, 500)
-    }
-  }, 200)
-}
-
-// 取消上传
-function cancelUpload() {
-  showUploadDialog.value = false
-  uploading.value = false
-  uploadProgress.value = 0
-  Object.assign(uploadForm, {
-    knowledgeBaseId: null,
-    files: [],
-    enableOCR: true,
-    autoChunk: true,
-    extractKeywords: true
-  })
-}
 </script>
 
 <style scoped>
 .document-management {
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 20px;
 }
 
-.stat-card {
-  transition: transform 0.2s ease-in-out;
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* Allow items to wrap if space is limited */
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
+.search-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap; /* Allow search bar items to wrap */
+  gap: 10px; /* Add some space between items */
 }
 
-.stat-icon {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap; /* Allow actions to wrap */
 }
 
-.upload-area {
-  border: 2px dashed rgb(var(--v-theme-primary));
-  border-radius: 8px;
-  padding: 24px;
-  background-color: rgba(var(--v-theme-primary), 0.05);
-  transition: all 0.2s ease;
+.filters {
+  margin-bottom: 20px;
+  /* display: none; */ /* Removed display: none; as the div will be empty anyway */
 }
 
-.upload-area:hover {
-  background-color: rgba(var(--v-theme-primary), 0.1);
+.document-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.preview-container {
-  background-color: rgb(var(--v-theme-surface-variant));
+.file-icon {
+  font-size: 24px;
 }
 
-.document-table :deep(.v-data-table-header) {
-  background-color: rgb(var(--v-theme-surface-variant));
+.name-info {
+  flex: 1;
 }
 
-/* 响应式调整 */
-@media (max-width: 960px) {
-  .document-management {
-    padding: 0 8px;
-  }
+.title {
+  font-weight: 500;
+  color: #303133;
+}
+
+.file-info {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end; /* 与知识库管理保持一致 */
+}
+
+.batch-actions {
+  margin-top: 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 </style>

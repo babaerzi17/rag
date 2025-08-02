@@ -28,7 +28,7 @@ class DocumentService:
             return None
         
         # 支持的文件类型
-        allowed_extensions = {'.txt', '.pdf', '.doc', '.docx', '.md'}
+        allowed_extensions = {'.txt', '.pdf', '.doc', '.docx', '.md', '.ppt', '.pptx', '.xls', '.xlsx'}
         file_extension = os.path.splitext(file.filename)[1].lower()
         if file_extension not in allowed_extensions:
             return None
@@ -36,8 +36,8 @@ class DocumentService:
         # 生成唯一文件名
         unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
         
-        # 创建上传目录
-        upload_dir = f"uploads/documents/{kb_id}"
+        # 创建上传目录 - 使用files目录
+        upload_dir = f"files/knowledge_base_{kb_id}"
         os.makedirs(upload_dir, exist_ok=True)
         
         # 保存文件
@@ -112,6 +112,24 @@ class DocumentService:
         self.db.commit()
         return True
     
+    def update_metadata(self, doc_id: int, metadata: Dict[str, Any]) -> bool:
+        """更新文档元数据"""
+        doc = self.db.query(Document).filter(Document.id == doc_id).first()
+        if not doc:
+            return False
+        
+        # 合并现有元数据
+        current_metadata = doc.doc_metadata or {}
+        current_metadata.update(metadata)
+        doc.doc_metadata = current_metadata
+        
+        # 如果元数据中包含title，同时更新title字段
+        if 'title' in metadata:
+            doc.title = metadata['title']
+        
+        self.db.commit()
+        return True
+    
     def delete(self, doc_id: int, user_id: int) -> bool:
         """删除文档"""
         doc = (
@@ -133,4 +151,17 @@ class DocumentService:
         # 删除数据库记录
         self.db.delete(doc)
         self.db.commit()
-        return True 
+        return True
+    
+    def get_all_documents(self, user_id: int, skip: int = 0, limit: int = 100) -> List[DocumentResponse]:
+        """获取用户的所有文档"""
+        documents = (
+            self.db.query(Document)
+            .join(KnowledgeBase, Document.knowledge_base_id == KnowledgeBase.id)
+            .filter(KnowledgeBase.created_by == user_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        return [DocumentResponse.from_orm(doc) for doc in documents] 

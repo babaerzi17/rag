@@ -8,7 +8,7 @@ from ..models.base import Base
 
 load_dotenv()
 
-SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', 'Admin.123')}@{os.getenv('DB_HOST', 'localhost')}/{os.getenv('DB_NAME', 'rag')}"
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', 'Admin.123')}@{os.getenv('DB_HOST', '124.223.204.200')}/{os.getenv('DB_NAME', 'rag')}"
 
 # 根据环境变量决定是否打印SQL
 # 设置 SQLALCHEMY_ECHO=True 在 .env 文件中可以开启SQL打印

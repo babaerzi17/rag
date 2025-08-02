@@ -388,89 +388,9 @@
             </div>
             
             <div class="function-body">
-              <!-- 文档管理 -->
-              <div v-if="currentFunction === 'documents'" class="function-panel">
-                <div class="panel-section">
-                  <h3>文档管理</h3>
-                  <p>这里是文档管理功能界面。您可以上传、编辑、删除和组织您的文档。</p>
-                  <div class="action-buttons">
-                    <button class="action-btn primary">上传文档</button>
-                    <button class="action-btn">创建文档</button>
-                    <button class="action-btn">批量操作</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 文档解析 -->
-              <div v-else-if="currentFunction === 'parse'" class="function-panel">
-                <div class="panel-section">
-                  <h3>文档解析</h3>
-                  <p>这里是文档解析功能界面。您可以解析各种格式的文档，提取文本内容。</p>
-                  <div class="action-buttons">
-                    <button class="action-btn primary">开始解析</button>
-                    <button class="action-btn">解析历史</button>
-                    <button class="action-btn">解析设置</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Chunk管理 -->
-              <div v-else-if="currentFunction === 'chunks'" class="function-panel">
-                <div class="panel-section">
-                  <h3>Chunk管理</h3>
-                  <p>这里是Chunk管理功能界面。您可以管理文档的分块处理和向量化。</p>
-                  <div class="action-buttons">
-                    <button class="action-btn primary">创建Chunk</button>
-                    <button class="action-btn">Chunk列表</button>
-                    <button class="action-btn">优化设置</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 模型配置 -->
-              <div v-else-if="currentFunction === 'model-config'" class="function-panel">
-                <div class="panel-section">
-                  <h3>模型配置</h3>
-                  <p>这里是模型配置功能界面。您可以配置和管理AI模型参数。</p>
-                  <div class="action-buttons">
-                    <button class="action-btn primary">配置模型</button>
-                    <button class="action-btn">模型列表</button>
-                    <button class="action-btn">性能测试</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 知识库管理 -->
-              <div v-else-if="currentFunction === 'kb-management'" class="function-panel">
-                <KnowledgeManagement />
-              </div>
-
-              <!-- 用户管理 -->
-              <div v-else-if="currentFunction === 'rbac_user'" class="function-panel">
-                <UserManagement />
-              </div>
-
-              <!-- 角色管理 -->
-              <div v-else-if="currentFunction === 'rbac_role'" class="function-panel">
-                <RoleManagement />
-              </div>
-
-              <!-- 权限管理 -->
-              <div v-else-if="currentFunction === 'rbac_perm'" class="function-panel">
-                <PermissionManagement />
-              </div>
-
-              <!-- 其他功能的通用界面 -->
-              <div v-else class="function-panel">
-                <div class="panel-section">
-                  <h3>{{ getFunctionTitle(currentFunction) }}</h3>
-                  <p>{{ getFunctionTitle(currentFunction) }}功能正在开发中，敬请期待。</p>
-                  <div class="action-buttons">
-                    <button class="action-btn primary">开始使用</button>
-                    <button class="action-btn">查看文档</button>
-                  </div>
-                </div>
-              </div>
+              <KeepAlive>
+                <component :is="getCurrentFunctionComponent()" :key="currentFunction" />
+              </KeepAlive>
             </div>
           </div>
         </div>
@@ -529,7 +449,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, KeepAlive } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import HistoryDialog from '@/components/chat/HistoryDialog.vue' // 导入历史记录对话框组件
@@ -542,7 +462,7 @@ import PermissionManagement from '@/views/rbac/PermissionManagement.vue'
 
 // 导入知识库管理组件
 import KnowledgeManagement from '@/views/knowledge/KnowledgeManagement.vue'
-
+import DocumentManagement from '@/views/document/DocumentManagement.vue'
 const authStore = useAuthStore()
 const router = useRouter()
 
@@ -594,42 +514,78 @@ function selectConversation(id: number) {
 
 function handleFunctionClick(functionType: string) {
   console.log('点击功能:', functionType);
-  currentView.value = 'function'; // 默认切换到功能界面
-  currentFunction.value = functionType; // 默认设置当前功能
+  currentView.value = 'function'; // 切换到功能界面
+  currentFunction.value = functionType; // 设置当前功能
   selectedConversationId.value = null; // 清空对话选中状态
 
-  // 根据功能类型进行路由跳转或显示不同内容
+  // 根据功能类型进行权限检查
   switch (functionType) {
     case 'rbac_user':
-      // 检查权限
       if (!authStore.hasPermission('menu:rbac_user')) {
         ElMessage.warning('您没有权限访问用户管理。');
         return;
       }
-      // 移除 router.push，通过 currentFunction 渲染组件
-      // router.push('/admin/rbac/users');
       break;
     case 'rbac_role':
-      // 检查权限
       if (!authStore.hasPermission('menu:rbac_role')) {
         ElMessage.warning('您没有权限访问角色管理。');
         return;
       }
-      // 移除 router.push，通过 currentFunction 渲染组件
-      // router.push('/admin/rbac/roles');
       break;
     case 'rbac_perm':
-      // 检查权限
       if (!authStore.hasPermission('menu:rbac_perm')) {
         ElMessage.warning('您没有权限访问权限管理。');
         return;
       }
-      // 移除 router.push，通过 currentFunction 渲染组件
-      // router.push('/admin/rbac/permissions');
       break;
     default:
-      // 对于其他功能，继续在当前视图内切换显示
       break;
+  }
+}
+
+// 获取当前功能对应的组件
+const getCurrentFunctionComponent = () => {
+  switch (currentFunction.value) {
+    case 'documents':
+      return DocumentManagement
+    case 'chunks':
+      return ChunkManagement
+    case 'kb-management':
+      return KnowledgeManagement
+    case 'rbac_user':
+      return UserManagement
+    case 'rbac_role':
+      return RoleManagement
+    case 'rbac_perm':
+      return PermissionManagement
+    case 'parse':
+    case 'model-config':
+    case 'param-tuning':
+    case 'performance':
+    case 'import':
+    case 'export':
+    case 'logs':
+    case 'kb-settings':
+    default:
+      // 对于没有专门组件的功能，返回一个通用组件
+      return {
+        template: `
+          <div class="panel-section">
+            <h3>{{ getFunctionTitle(currentFunction) }}</h3>
+            <p>{{ getFunctionTitle(currentFunction) }}功能正在开发中，敬请期待。</p>
+            <div class="action-buttons">
+              <button class="action-btn primary">开始使用</button>
+              <button class="action-btn">查看文档</button>
+            </div>
+          </div>
+        `,
+        setup() {
+          return {
+            currentFunction,
+            getFunctionTitle
+          }
+        }
+      }
   }
 }
 
