@@ -45,6 +45,7 @@ class Document(Base):
     file_path = Column(String(500), nullable=False)
     file_type = Column(String(50))
     file_size = Column(BigInteger)
+    file_id = Column(Integer, ForeignKey("files.id", ondelete="SET NULL"))  # 关联files表
     status = Column(String(20), nullable=False, default="processing")
     page_count = Column(Integer)
     chunk_count = Column(Integer, default=0)
@@ -56,6 +57,7 @@ class Document(Base):
     # Relationships
     knowledge_base = relationship("KnowledgeBase", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document")
+    file = relationship("File", back_populates="documents")
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"
@@ -73,3 +75,17 @@ class DocumentChunk(Base):
     # Relationships
     document = relationship("Document", back_populates="chunks")
     knowledge_base = relationship("KnowledgeBase", back_populates="document_chunks") 
+
+class File(Base):
+    __tablename__ = "files"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    original_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(BigInteger)
+    file_type = Column(String(50))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    # Relationships
+    documents = relationship("Document", back_populates="file") 

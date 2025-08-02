@@ -199,5 +199,18 @@ export const documentApi = {
   // 获取文档下载URL（保留原有功能）
   getDocumentDownload: (id: number): Promise<{ download_url: string }> => {
     return api.get(`/documents/${id}/download`)
+  },
+
+  // 批量创建文档
+  batchCreateDocuments: (kb_id: number, documents: Array<{
+    file_id: number
+    title: string
+    description?: string
+    tags?: string
+  }>): Promise<Document[]> => {
+    return api.post('/documents/batch-create', {
+      kb_id,
+      documents
+    })
   }
 } 

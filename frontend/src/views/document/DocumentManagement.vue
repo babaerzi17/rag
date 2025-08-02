@@ -190,14 +190,13 @@
               :auto-upload="false"
               :on-change="handleFileChange"
               :show-file-list="false"
-              multiple
               accept=".pdf,.doc,.docx,.txt,.md,.ppt,.pptx,.xls,.xlsx"
             >
               <el-button type="primary" :icon="Upload" size="small">选择文件</el-button>
             </el-upload>
             
             <!-- 文件夹上传按钮 -->
-            <div style="margin-top: 10px; text-align: center;">
+            <div style="text-align: center;">
               <input
                 ref="folderInputRef"
                 type="file"
@@ -708,18 +707,26 @@ const showBatchImportDialog = () => {
 
 // 新的文件处理方法
 const handleFileChange = (file: UploadUserFile) => {
+  if (!uploadForm.knowledgeBaseId) {
+    ElMessage.warning('请先选择知识库')
+    return
+  }
   if (file.raw) {
-    // 检查文件类型
     const fileExtension = getFileExtension(file.raw.name)
     if (!allowedFileTypes.includes(fileExtension)) {
       ElMessage.warning(`文件 ${file.raw.name} 的格式不被支持。支持的格式有：${allowedFileTypes.join(', ')}`)
       return
     }
+    uploadFileList.value = []
     addFilesToList([file.raw])
   }
 }
 
 const handleFolderChange = (event: Event) => {
+  if (!uploadForm.knowledgeBaseId) {
+    ElMessage.warning('请先选择知识库')
+    return
+  }
   const target = event.target as HTMLInputElement
   if (target.files) {
     const files = Array.from(target.files)
@@ -733,7 +740,6 @@ const handleFolderChange = (event: Event) => {
     })
     addFilesToList(validFiles)
   }
-  // 清空input以允许重新选择同一文件夹
   target.value = ''
 }
 
@@ -786,11 +792,9 @@ const uploadSingleFile = async (fileItem: any) => {
     fileItem.status = 'uploading'
     fileItem.progress = 0
     
-    // 创建FormData
     const formData = new FormData()
     formData.append('file', fileItem.file)
     
-    // 使用XMLHttpRequest来支持进度监听
     const xhr = new XMLHttpRequest()
     
     return new Promise((resolve, reject) => {
@@ -804,10 +808,21 @@ const uploadSingleFile = async (fileItem: any) => {
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText)
-            fileItem.status = 'success'
-            fileItem.progress = 100
-            fileItem.fileId = response.id || response.file_id
-            resolve(response)
+            if (response.data && response.data.id) {
+              fileItem.status = 'success'
+              fileItem.progress = 100
+              fileItem.fileId = response.data.id
+              resolve(response.data)
+            } else if (response.id) {
+              fileItem.status = 'success'
+              fileItem.progress = 100
+              fileItem.fileId = response.id
+              resolve(response)
+            } else {
+              fileItem.status = 'error'
+              fileItem.error = '响应格式错误'
+              reject(new Error('Invalid response format'))
+            }
           } catch (e) {
             fileItem.status = 'error'
             fileItem.error = '响应解析失败'
@@ -826,9 +841,8 @@ const uploadSingleFile = async (fileItem: any) => {
         reject(new Error('Network error'))
       })
       
-      xhr.open('POST', '/api/files/upload', true)
+      xhr.open('POST', '/api/documents/files/upload', true)
       
-      // 添加认证头等
       const token = localStorage.getItem('token')
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`)
@@ -930,6 +944,35 @@ const submitImport = async () => {
     ElMessage.error('批量导入失败：' + (error.message || '未知错误'))
   } finally {
     importing.value = false
+  }
+}
+
+const submitBatchUpload = async () => {
+  if (!uploadFormRef.value) return
+  
+  const valid = await uploadFormRef.value.validate()
+  if (!valid) return
+  
+  submitting.value = true
+  
+  try {
+    const batchData = uploadFileList.value
+      .filter(f => f.status === 'success' && f.fileId)
+      .map(f => ({
+        file_id: f.fileId,
+        title: f.name,
+        description: uploadForm.description,
+        tags: uploadForm.tags
+      }))
+    await documentApi.batchCreateDocuments(uploadForm.knowledgeBaseId, batchData)
+    ElMessage.success('文档创建成功')
+    dialogVisible.value = false
+    resetUploadForm()
+    refreshDocuments()
+  } catch (error) {
+    ElMessage.error('文档创建失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -1192,6 +1235,12 @@ onMounted(() => {
 
 .batch-actions {
   margin-top: 20px;
+}
+
+.upload-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .dialog-footer {

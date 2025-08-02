@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, Query, Body
+from fastapi import File as FastAPIFile # 避免与模型中的File名称冲突
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
@@ -22,6 +23,8 @@ try:
     from ..schemas.knowledge import DocumentResponse, DocumentCreate, DocumentUpdate
     from ..services.document_service import DocumentService
     from ..logger import get_logger
+    from ..models.knowledge import File
+    from ..services.file_service import FileService
 except ImportError:
     from backend.database import get_db
     from backend.models.knowledge import KnowledgeBase, Document, DocumentChunk, DocumentStatus
@@ -30,6 +33,8 @@ except ImportError:
     from backend.schemas.knowledge import DocumentResponse, DocumentCreate, DocumentUpdate
     from backend.services.document_service import DocumentService
     from backend.logger import get_logger
+    from backend.models.knowledge import File
+    from backend.services.file_service import FileService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -97,47 +102,35 @@ async def get_document(
     
     return document
 
+@router.post("/files/upload", response_model=Dict[str, int])
+async def upload_file(
+    file: UploadFile = FastAPIFile(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    file_service = FileService(db)
+    file_id = await file_service.upload(current_user.id, file)
+    if not file_id:
+        raise HTTPException(status_code=500, detail="文件上传失败")
+    return {"id": file_id, "file_id": file_id}  # 返回兼容格式
+
 @router.post("/", response_model=DocumentResponse)
 async def create_document(
     kb_id: int = Form(...),
     title: str = Form(...),
     description: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),
-    file: UploadFile = File(...),
+    file_id: int = Form(...),
     document_service: DocumentService = Depends(get_document_service_dep),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """创建文档（上传单个文件）"""
-    logger.info(f"创建文档: kb_id={kb_id}, user_id={current_user.id}, file_name={file.filename}")
+    file_record = db.query(File).filter(File.id == file_id, File.created_by == current_user.id).first()
+    if not file_record:
+        raise HTTPException(status_code=404, detail="文件不存在")
     
-    # 验证知识库存在
-    db = next(get_db())
-    kb = db.query(KnowledgeBase).filter(
-        KnowledgeBase.id == kb_id,
-        KnowledgeBase.created_by == current_user.id
-    ).first()
-    
-    if not kb:
-        logger.warning(f"知识库不存在: kb_id={kb_id}")
-        raise HTTPException(status_code=404, detail="知识库不存在")
-    
-    # 上传文档
-    document = await document_service.upload(kb_id, current_user.id, file)
-    if not document:
-        logger.warning(f"文件上传失败: file_name={file.filename}")
-        raise HTTPException(status_code=400, detail="文件上传失败或文件类型不支持")
-    
-    # 更新标题和描述
-    if title != file.filename:
-        document_service.update_metadata(document.id, {"title": title})
-    
-    if description:
-        document_service.update_metadata(document.id, {"description": description})
-    
-    if tags:
-        tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-        document_service.update_metadata(document.id, {"tags": tag_list})
-    
+    # 创建文档，使用 file_record 信息
+    document = await document_service.create_from_file(kb_id, current_user.id, file_record, title, description, tags)
     return document
 
 @router.put("/{doc_id}", response_model=DocumentResponse)
@@ -210,7 +203,7 @@ async def batch_upload_documents(
     kb_id: int = Form(...),
     description: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),
-    files: List[UploadFile] = File(...),
+    files: List[UploadFile] = FastAPIFile(...),
     document_service: DocumentService = Depends(get_document_service_dep),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -419,6 +412,31 @@ async def batch_delete_documents(
         "deleted_count": deleted_count,
         "failed_count": failed_count
     }
+
+@router.post("/batch-create", response_model=List[DocumentResponse])
+async def batch_create_documents(
+    kb_id: int = Body(...),
+    documents: List[Dict[str, Any]] = Body(...),  # [{file_id, title, description, tags}]
+    document_service: DocumentService = Depends(get_document_service_dep),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    created_docs = []
+    for doc_data in documents:
+        file_id = doc_data.get('file_id')
+        title = doc_data.get('title', 'Untitled')
+        description = doc_data.get('description')
+        tags_str = doc_data.get('tags')
+        tags = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
+        
+        file_record = db.query(File).filter(File.id == file_id, File.created_by == current_user.id).first()
+        if not file_record:
+            continue  # 跳过无效文件
+        
+        doc = await document_service.create_from_file(kb_id, current_user.id, file_record, title, description, tags)
+        created_docs.append(doc)
+    
+    return created_docs
 
 @router.get("/stats")
 async def get_document_stats(

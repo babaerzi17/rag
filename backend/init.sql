@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 文件表 (必须在documents表之前创建)
+CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    original_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size BIGINT,
+    file_type VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 文档表
 CREATE TABLE IF NOT EXISTS documents (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -81,6 +93,7 @@ CREATE TABLE IF NOT EXISTS documents (
     file_path VARCHAR(500) NOT NULL,
     file_type VARCHAR(50),
     file_size BIGINT,
+    file_id INT, -- 关联files表
     status VARCHAR(20) NOT NULL DEFAULT 'processing',
     page_count INT,
     chunk_count INT DEFAULT 0,
@@ -89,6 +102,7 @@ CREATE TABLE IF NOT EXISTS documents (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by INT,
     FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -427,3 +441,5 @@ INSERT INTO model_configs (name, provider, model_name, is_default, config)
 VALUES 
 ('DeepSeek Chat', 'deepseek', 'deepseek-chat', TRUE, '{"temperature": 0.7, "max_tokens": 1000}'),
 ('OpenAI GPT-3.5', 'openai', 'gpt-3.5-turbo', FALSE, '{"temperature": 0.7, "max_tokens": 1000}');
+
+-- files表已经在documents表之前创建，移除重复定义

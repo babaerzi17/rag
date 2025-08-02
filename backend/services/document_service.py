@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 
 # Import models
-from ..models.knowledge import Document, DocumentStatus, KnowledgeBase
+from ..models.knowledge import Document, DocumentStatus, KnowledgeBase, File
 from ..schemas.knowledge import DocumentCreate, DocumentUpdate, DocumentResponse
 
 logger = logging.getLogger(__name__)
@@ -141,14 +141,20 @@ class DocumentService:
         if not doc:
             return False
         
-        # 删除文件
+        # 删除物理文件
         try:
             if os.path.exists(doc.file_path):
                 os.remove(doc.file_path)
         except Exception as e:
             logger.error(f"删除文件失败: {e}")
         
-        # 删除数据库记录
+        # 删除files表中的记录
+        if doc.file_id:
+            file_record = self.db.query(File).filter(File.id == doc.file_id).first()
+            if file_record:
+                self.db.delete(file_record)
+        
+        # 删除文档记录
         self.db.delete(doc)
         self.db.commit()
         return True
@@ -165,3 +171,27 @@ class DocumentService:
         )
         
         return [DocumentResponse.from_orm(doc) for doc in documents] 
+
+    def create_from_file(self, kb_id: int, user_id: int, file_record: File, title: str, description: Optional[str], tags: List[str]) -> DocumentResponse:
+        # 检查知识库
+        kb = self.db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id, KnowledgeBase.created_by == user_id).first()
+        if not kb:
+            raise ValueError("知识库不存在")
+        
+        doc = Document(
+            knowledge_base_id=kb_id,
+            title=title,
+            file_path=file_record.file_path,
+            file_type=file_record.file_type,
+            file_size=file_record.file_size,
+            file_id=file_record.id,  # 关联file_id
+            status="processing",
+            created_by=user_id,
+            doc_metadata={"description": description, "tags": tags}
+        )
+        
+        self.db.add(doc)
+        self.db.commit()
+        self.db.refresh(doc)
+        
+        return DocumentResponse.from_orm(doc) 
