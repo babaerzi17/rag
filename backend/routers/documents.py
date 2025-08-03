@@ -84,6 +84,8 @@ async def get_documents(
     skip = (page - 1) * page_size
     documents = query.offset(skip).limit(page_size).all()
     
+    logger.info(f"查询到 {len(documents)} 条文档: {[doc.title for doc in documents]}")
+    
     return [DocumentResponse.from_orm(doc) for doc in documents]
 
 @router.get("/{doc_id}", response_model=DocumentResponse)
@@ -433,7 +435,7 @@ async def batch_create_documents(
         if not file_record:
             continue  # 跳过无效文件
         
-        doc = await document_service.create_from_file(kb_id, current_user.id, file_record, title, description, tags)
+        doc = document_service.create_from_file(kb_id, current_user.id, file_record, title, description, tags)
         created_docs.append(doc)
     
     return created_docs

@@ -83,14 +83,10 @@
         
         <el-table-column prop="knowledge_base" label="知识库" width="150">
           <template #default="{ row }">
-            <el-tag
-              v-if="row.knowledge_base"
-              :color="row.knowledge_base.color || '#409eff'"
-              effect="light"
-            size="small"
-          >
+            <span v-if="row.knowledge_base">
               {{ row.knowledge_base.name }}
-            </el-tag>
+            </span>
+            <span v-else>未知知识库</span>
         </template>
         </el-table-column>
         
@@ -133,8 +129,12 @@
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
           background
-          layout="prev, pager, next"
+          layout="total, sizes, prev, pager, next, jumper"
+          :page-sizes="[10, 20, 50, 100]"
+          @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
       </div>
@@ -615,18 +615,25 @@ const fetchDocuments = async () => {
     loading.value = true
     const params = {
       page: pagination.page,
-      // page_size: pagination.pageSize, // 移除，因为不再提供每页大小选择
+      page_size: pagination.pageSize,
       search: searchQuery.value || undefined,
       kb_id: knowledgeBaseFilter.value || undefined,
-      // Removed status and file_type from params as per UI change
-      // status: statusFilter.value || undefined,
-      // file_type: typeFilter.value || undefined
     }
     
     const response = await documentApi.getDocuments(params)
-    // 确保 response 是一个数组，即使后端返回 null 或其他非数组类型
-    documentList.value = Array.isArray(response) ? response : []
-    // pagination.total = documentList.value.length // 暂时注释，等待后端返回total
+    
+    console.log('文档API原始响应:', response)
+    console.log('响应文档数量:', response.data.length)
+    
+    documentList.value = response.data.map(doc => ({
+      ...doc,
+      knowledge_base: doc.knowledge_base || { name: '未知知识库', color: '#gray' },
+      tags: doc.doc_metadata?.tags || []
+    }))
+    
+    console.log('处理后的 documentList:', documentList.value)
+    
+    pagination.total = response.data.length // 设置总数用于分页
     
     // 获取知识库信息
     await enrichDocumentsWithKnowledgeBase()
@@ -677,12 +684,11 @@ const handleSearch = () => {
   fetchDocuments()
 }
 
-// 移除 handleSizeChange 方法，因为不再支持页面大小调整
-// const handleSizeChange = (val: number) => {
-//   pagination.pageSize = val
-//   pagination.page = 1
-//   fetchDocuments()
-// }
+const handleSizeChange = (val: number) => {
+  pagination.pageSize = val
+  pagination.page = 1
+  fetchDocuments()
+}
 
 const handleCurrentChange = (val: number) => {
   pagination.page = val
